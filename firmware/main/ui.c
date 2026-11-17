@@ -22,7 +22,7 @@ typedef enum { PAGE_HOME, PAGE_WIFI, PAGE_BLE, PAGE_DEFENSE,
                PAGE_ANALYTICS, PAGE_DIAG, PAGE_SETTINGS, PAGE_LAB, PAGE_MODULES } page_t;
 static lang_t lang = LANG_VI;
 static page_t page = PAGE_HOME;
-static lv_obj_t *root, *heading, *body, *back_btn, *start_btn, *lang_btn, *tiles[8];
+static lv_obj_t *root, *heading, *content_panel, *body, *back_btn, *start_btn, *lang_btn, *tiles[8];
 static volatile bool scan_busy = false, scan_ready = false;
 static volatile bool ble_busy = false, ble_ready = false;
 static esp_err_t ble_result = ESP_OK;
@@ -118,16 +118,31 @@ static void ble_worker(void *unused) {
     vTaskDelete(NULL);
 }
 static void render_ble(void) {
-    if (ble_busy) { lv_label_set_text(body, lang == LANG_VI ? "Đang quét thiết bị BLE..." : "Scanning BLE advertisements..."); return; }
-    if (!ble_ready) { lv_label_set_text(body, lang == LANG_VI ? "Nhấn Quét để tìm thiết bị BLE." : "Tap Scan to discover BLE devices."); return; }
-    if (ble_result != ESP_OK) {
-        snprintf(report, sizeof(report), "BLE: %s", esp_err_to_name(ble_result));
-        lv_label_set_text(body, report); return;
+    if (ble_busy) {
+        lv_label_set_text(body, lang == LANG_VI ? "Đang quét BLE..." : "Scanning BLE...");
+        return;
     }
-    size_t used = (size_t)snprintf(report,sizeof(report), "%u thiết bị BLE\\n\\n",ble_count);
-    for (uint16_t i=0; i<ble_count && i<12 && used < sizeof(report)-90; i++) {
-        int n = snprintf(report+used,sizeof(report)-used,"%s\\n%d dBm  %s\\n",
-            ble_results[i].name, ble_results[i].rssi, ble_results[i].address);
+    if (!ble_ready) {
+        lv_label_set_text(body, lang == LANG_VI ?
+            "Chạm Quét để tìm BLE.\nKết quả sẽ có phân tích tín hiệu." :
+            "Tap Scan to discover BLE devices.");
+        return;
+    }
+    if (ble_result != ESP_OK) {
+        snprintf(report,sizeof(report),"BLE: %s",esp_err_to_name(ble_result));
+        lv_label_set_text(body,report);
+        return;
+    }
+    sec_ble_audit_t a;
+    sec_ble_audit(ble_results,ble_count,&a);
+    size_t used=(size_t)snprintf(report,sizeof(report),
+        lang == LANG_VI ?
+        "BLE AUDIT\nThiết bị: %u\nCó tên: %u\nẨn tên: %u\nGần (RSSI >= -60): %u\nYếu (<= -85): %u\n\n" :
+        "BLE AUDIT\nDevices: %u\nNamed: %u\nUnnamed: %u\nStrong (>= -60): %u\nWeak (<= -85): %u\n\n",
+        a.total,a.named,a.anonymous,a.strong,a.weak);
+    for(uint16_t i=0;i<ble_count && i<12 && used<sizeof(report)-95;i++) {
+        int n=snprintf(report+used,sizeof(report)-used,"%s\n%d dBm  %s\n",
+            ble_results[i].name,ble_results[i].rssi,ble_results[i].address);
         if(n<=0 || (size_t)n>=sizeof(report)-used) break;
         used+=(size_t)n;
     }
@@ -185,10 +200,10 @@ static void refresh(void) {
         lv_label_set_text(lv_obj_get_child(tiles[i],0), menus[lang][i]);
     }
     if (home) {
-        lv_obj_add_flag(body, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(content_panel, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(back_btn, LV_OBJ_FLAG_HIDDEN);
     } else {
-        lv_obj_remove_flag(body, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(content_panel, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(back_btn, LV_OBJ_FLAG_HIDDEN);
     }
     if (page == PAGE_WIFI || page == PAGE_BLE) lv_obj_remove_flag(start_btn, LV_OBJ_FLAG_HIDDEN);
@@ -252,10 +267,19 @@ void sec_ui_init(void) {
         lv_obj_t *label = lv_label_create(tiles[i]);
         lv_obj_center(label);
     }
-    body = lv_label_create(root);
-    lv_obj_set_width(body, 218);
+    content_panel = lv_obj_create(root);
+    lv_obj_set_pos(content_panel, 8, 43);
+    lv_obj_set_size(content_panel, 224, 222);
+    lv_obj_set_style_bg_color(content_panel, lv_color_hex(0x0E2335), 0);
+    lv_obj_set_style_border_color(content_panel, lv_color_hex(0x236D7A), 0);
+    lv_obj_set_style_border_width(content_panel, 1, 0);
+    lv_obj_set_style_radius(content_panel, 8, 0);
+    lv_obj_set_style_pad_all(content_panel, 8, 0);
+    lv_obj_add_flag(content_panel, LV_OBJ_FLAG_SCROLLABLE);
+    body = lv_label_create(content_panel);
+    lv_obj_set_width(body, 202);
     lv_label_set_long_mode(body, LV_LABEL_LONG_WRAP);
-    lv_obj_align(body, LV_ALIGN_TOP_MID, 0, 47);
+    lv_obj_align(body, LV_ALIGN_TOP_LEFT, 0, 0);
     back_btn = lv_button_create(root);
     lv_obj_set_size(back_btn, 86, 37);
     lv_obj_align(back_btn, LV_ALIGN_BOTTOM_LEFT, 9, -10);
