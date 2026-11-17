@@ -34,7 +34,7 @@ function render() {
   document.querySelectorAll("[data-vi][data-en]").forEach(node => {
     node.textContent = node.dataset[language];
   });
-  const match = firmwareVersion.match(/_v([^_]+)_(\\d{2}-\\d{2}-\\d{4})_(\\d{2}-\\d{2})$/);
+  const match = firmwareVersion.match(/_v([^_]+)_(\d{2}-\d{2}-\d{4})_(\d{2}-\d{2})$/);
   version.textContent = match ? "ESP32-SEC v" + match[1] : (firmwareVersion || "ESP32-SEC · Alpha");
   buildTime.textContent = match ?
     (language === "vi" ? "Ngày build: " : "Built: ") + match[2] + " " + match[3].replace("-", ":") + " (VN)" : "";
@@ -60,7 +60,7 @@ async function loadFirmware() {
     if (!latestResponse.ok) throw new Error("Latest manifest HTTP " + latestResponse.status);
     const latest = await latestResponse.json();
     const label = String(latest.version || "");
-    if (!/^ESP32-SEC_v[0-9A-Za-z.-]+_\\d{2}-\\d{2}-\\d{4}_\\d{2}-\\d{2}$/.test(label)) {
+    if (!/^ESP32-SEC_v[0-9A-Za-z.-]+_\d{2}-\d{2}-\d{4}_\d{2}-\d{2}$/.test(label)) {
       throw new Error("Unexpected firmware version");
     }
     const manifestPath = "./manifest-" + label + ".json";
@@ -72,7 +72,7 @@ async function loadFirmware() {
       item.chipFamily === "ESP32-S3" && Array.isArray(item.parts) &&
       item.parts.length === 1 && item.parts[0].offset === 0 &&
       typeof item.parts[0].path === "string" &&
-      /^firmware\\/ESP32-SEC_v[0-9A-Za-z.-]+_\\d{2}-\\d{2}-\\d{4}_\\d{2}-\\d{2}_merged\\.bin$/.test(item.parts[0].path)
+      /^firmware\/ESP32-SEC_v[0-9A-Za-z.-]+_\d{2}-\d{2}-\d{4}_\d{2}-\d{2}_merged\.bin$/.test(item.parts[0].path)
     );
     if (!build || build.parts[0].path !== "firmware/" + label + "_merged.bin") {
       throw new Error("Firmware binary does not match version");
