@@ -1,9 +1,12 @@
 const localeButton = document.getElementById("locale");
 const version = document.getElementById("version");
+const firmwareFile = document.getElementById("firmware-file");
+const firmwareDownload = document.getElementById("firmware-download");
 const installer = document.getElementById("installer");
 const status = document.getElementById("status");
 let language = localStorage.getItem("esp32_sec_lang") === "en" ? "en" : "vi";
 let firmwareVersion = "";
+let selectedFirmware = "";
 let available = false;
 
 const strings = {
@@ -18,6 +21,8 @@ function render() {
     node.textContent = node.dataset[language];
   });
   version.textContent = firmwareVersion ? strings[language].build + ": " + firmwareVersion : "ESP32-SEC · Alpha";
+  firmwareFile.textContent = selectedFirmware || (language === "vi" ? "Chưa chọn firmware" : "No firmware selected");
+  firmwareDownload.hidden = !available || !selectedFirmware;
   status.textContent = available ? strings[language].ready : strings[language].missing;
   installer.hidden = !available;
 }
@@ -39,7 +44,14 @@ async function loadManifest() {
       build.parts.every(part => typeof part.path === "string" &&
         part.path.startsWith("firmware/") && Number.isInteger(part.offset) && part.offset === 0 && part.path.endsWith("_merged.bin"))
     );
-    if (available) firmwareVersion = String(manifest.version || "");
+    if (available) {
+      firmwareVersion = String(manifest.version || "");
+      const build = manifest.builds.find(build => build.chipFamily === "ESP32-S3" &&
+        Array.isArray(build.parts) && build.parts.length === 1 &&
+        build.parts[0].path.endsWith("_merged.bin"));
+      selectedFirmware = build.parts[0].path.split("/").pop();
+      firmwareDownload.href = new URL(build.parts[0].path, location.href).href;
+    }
   } catch {
     available = false;
   }
