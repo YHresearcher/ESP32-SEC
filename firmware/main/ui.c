@@ -115,12 +115,13 @@ static void ble_worker(void *unused) {
     vTaskDelete(NULL);
 }
 static void render_ble(void) {
-    if (ble_busy) { lv_label_set_text(body, "Scanning BLE advertisements..."); return; }
-    if (!ble_ready) { lv_label_set_text(body, "Tap Scan to discover BLE devices."); return; }
+    if (ble_busy) { lv_label_set_text(body, lang == LANG_VI ? "Đang quét thiết bị BLE..." : "Scanning BLE advertisements..."); return; }
+    if (!ble_ready) { lv_label_set_text(body, lang == LANG_VI ? "Nhấn Quét để tìm thiết bị BLE." : "Tap Scan to discover BLE devices."); return; }
     if (ble_result != ESP_OK) {
-        lv_label_set_text(body, "BLE scan error / not ready."); return;
+        snprintf(report, sizeof(report), "BLE: %s", esp_err_to_name(ble_result));
+        lv_label_set_text(body, report); return;
     }
-    size_t used = (size_t)snprintf(report,sizeof(report), "%u BLE devices\\n\\n",ble_count);
+    size_t used = (size_t)snprintf(report,sizeof(report), "%u thiết bị BLE\\n\\n",ble_count);
     for (uint16_t i=0; i<ble_count && i<12 && used < sizeof(report)-90; i++) {
         int n = snprintf(report+used,sizeof(report)-used,"%s\\n%d dBm  %s\\n",
             ble_results[i].name, ble_results[i].rssi, ble_results[i].address);
@@ -194,9 +195,7 @@ static void refresh(void) {
     lv_label_set_text(lv_obj_get_child(lang_btn,0), lang == LANG_VI ? "EN" : "VI");
     lv_label_set_text(lv_obj_get_child(start_btn,0), ((page==PAGE_WIFI && scan_busy) || (page==PAGE_BLE && ble_busy)) ? "Stop" : "Scan");
     if (page == PAGE_WIFI) render_wifi();
-    if (page == PAGE_BLE) lv_label_set_text(body, lang == LANG_VI ?
-        "BLE Explorer: chua tich hop.\nChua co quet BLE." :
-        "BLE Explorer not yet implemented.\nNo BLE scan available.");
+    if (page == PAGE_BLE) render_ble();
     if (page == PAGE_DEFENSE) lv_label_set_text(body,
         lang == LANG_VI ? "Defense: cho module\ngiam sat thu dong." :
                           "Defense: passive monitoring\nmodule pending.");
