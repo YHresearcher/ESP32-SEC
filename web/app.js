@@ -35,9 +35,9 @@ async function loadManifest() {
     const manifest = await response.json();
     available = Array.isArray(manifest.builds) && manifest.builds.some(build =>
       build.chipFamily === "ESP32-S3" &&
-      Array.isArray(build.parts) && build.parts.length === 3 &&
+      Array.isArray(build.parts) && build.parts.length === 1 &&
       build.parts.every(part => typeof part.path === "string" &&
-        part.path.startsWith("firmware/") && Number.isInteger(part.offset) && part.offset >= 0)
+        part.path.startsWith("firmware/") && Number.isInteger(part.offset) && part.offset === 0 && part.path.endsWith("_merged.bin"))
     );
     if (available) firmwareVersion = String(manifest.version || "");
   } catch {
