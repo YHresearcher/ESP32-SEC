@@ -60,7 +60,15 @@ static int ble_event(struct ble_gap_event *ev, void *arg) {
 esp_err_t sec_ble_scan(sec_ble_device_t *out, uint16_t *count) {
     if (!out || !count) return ESP_ERR_INVALID_ARG;
     *count = 0;
-    if (!ready) return ESP_ERR_INVALID_STATE;
+    // NimBLE synchronizes after host task startup. Allow ~4 seconds.
+    for (int n = 0; n < 40 && !ready; ++n) {
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+    if (!ready) {
+        ESP_LOGW(TAG, "BLE_NOT_READY: host synchronization timed out");
+        return ESP_ERR_INVALID_STATE;
+    }
+    ESP_LOGI(TAG, "BLE_SCAN_START: passive, 5000ms");
     uint8_t own_addr_type;
     if (ble_hs_id_infer_auto(0,&own_addr_type) != 0) return ESP_FAIL;
     cancel_requested=false;
@@ -71,11 +79,12 @@ esp_err_t sec_ble_scan(sec_ble_device_t *out, uint16_t *count) {
     p.passive = 1; p.filter_duplicates = 1;
     p.itvl = 0x50; p.window = 0x30;
     int rc = ble_gap_disc(own_addr_type, 5000, &p, ble_event, NULL);
-    if(rc != 0) {scan_out=NULL;return ESP_FAIL;}
+    if(rc != 0) { ESP_LOGE(TAG, "BLE_GAP_DISC_FAILED: %d", rc);scan_out=NULL;return ESP_FAIL;}
     for (int i=0; i<53 && !cancel_requested; i++) vTaskDelay(pdMS_TO_TICKS(100));
     ble_gap_disc_cancel();
     *count=scan_count;
     scan_out=NULL;
+    ESP_LOGI(TAG, "BLE_SCAN_DONE: %u devices", (unsigned)*count);
     return ESP_OK;
 }
 
