@@ -12,3 +12,6 @@ typedef struct {
 esp_err_t sec_wifi_init(void);
 // Blocking scan: call only from background FreeRTOS worker; NEVER from LVGL event.
 esp_err_t sec_wifi_scan(sec_wifi_ap_t *out, uint16_t *count);
+
+// Request early cancellation from the UI task.
+esp_err_t sec_wifi_cancel(void);
