@@ -21,12 +21,8 @@ small{color:#9dbbc9}.status{padding:12px;border-radius:8px;background:#183348}
  data-en="Wireless security diagnostics firmware with 2.8-inch touchscreen, EN/VI. ESP32-S3 N16R8 + ST7789V + XPT2046.">Firmware kiểm tra mạng không dây với màn hình cảm ứng 2.8 inch, EN/VI. ESP32-S3 N16R8 + ST7789V + XPT2046.</p>
 <div class="grid">
 <section class="card"><h2 data-vi="Nạp firmware" data-en="Install firmware">Nạp firmware</h2>
-<p data-vi="Bản alpha thử nghiệm chưa được kiểm thử trên thiết bị thật. Nạp firmware sẽ ghi đè Chibi hiện tại. Hãy sao lưu trước." data-en="Experimental alpha is not hardware tested. Flashing overwrites your existing Chibi firmware. Back it up first.">Bản alpha thử nghiệm chưa được kiểm thử trên thiết bị thật. Nạp firmware sẽ ghi đè Chibi hiện tại. Hãy sao lưu trước.</p>
+<p data-vi="Bản alpha thử nghiệm. Bạn chủ động chọn thiết bị và xác nhận nạp trên trình duyệt." data-en="Experimental alpha. Choose your device and confirm flashing in the browser.">Bản alpha thử nghiệm. Bạn chủ động chọn thiết bị và xác nhận nạp trên trình duyệt.</p>
 <p id="firmware-name" class="status"></p>
-<label style="display:flex;align-items:flex-start;gap:10px;margin:18px 0;line-height:1.5">
-  <input id="flash-consent" type="checkbox" style="width:20px;height:20px;flex-shrink:0;margin-top:2px">
-  <span data-vi="Tôi xác nhận dùng đúng ESP32-S3 N16R8 + màn hình Chibi 2.8 inch, đã sao lưu Chibi và chấp nhận rủi ro của firmware alpha." data-en="I confirm ESP32-S3 N16R8 + Chibi 2.8-inch screen, have backed up Chibi, and accept the experimental alpha firmware risks.">Tôi xác nhận dùng đúng ESP32-S3 N16R8 + màn hình Chibi 2.8 inch, đã sao lưu Chibi và chấp nhận rủi ro của firmware alpha.</span>
-</label>
 <div id="installer" hidden><esp-web-install-button manifest="./manifest.json"></esp-web-install-button></div>
 <p class="status" id="install-status" aria-live="polite"></p>
 </section>
@@ -39,8 +35,8 @@ data-en="Read USB logs on browsers supporting Web Serial. No automatic connectio
 </div>
 <section class="card"><h2>Logs</h2><textarea id="log" readonly aria-label="Serial logs"></textarea></section>
 <section class="card"><h2 data-vi="Lưu ý an toàn" data-en="Safety notes">Lưu ý an toàn</h2>
-<p data-vi="Sao lưu Chibi trước khi nạp. Không sử dụng firmware dành cho board ESP32-DIV gốc. USB data cable và trình duyệt Chrome/Edge desktop được khuyên dùng."
-data-en="Back up Chibi before flashing. Do not flash firmware for the original ESP32-DIV board. Use a USB data cable and Chrome/Edge desktop.">Sao lưu Chibi trước khi nạp. Không sử dụng firmware dành cho board ESP32-DIV gốc. USB data cable và trình duyệt Chrome/Edge desktop được khuyên dùng.</p>
+<p data-vi="Firmware dành cho ESP32-S3 N16R8 với màn hình 2.8 inch theo cấu hình dự án. Sử dụng cáp USB dữ liệu và Chrome/Edge trên máy tính."
+data-en="Firmware targets ESP32-S3 N16R8 with the project's 2.8-inch display wiring. Use a USB data cable and Chrome/Edge on desktop.">Firmware dành cho ESP32-S3 N16R8 với màn hình 2.8 inch theo cấu hình dự án. Sử dụng cáp USB dữ liệu và Chrome/Edge trên máy tính.</p>
 <a href="https://github.com/YHresearcher/ESP32-SEC">GitHub source</a>
 </section>
 <small>ESP32-SEC · Alpha Experimental · Only flash on your own compatible board.</small>
