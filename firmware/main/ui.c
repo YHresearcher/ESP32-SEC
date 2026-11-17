@@ -10,6 +10,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "lvgl.h"
+LV_FONT_DECLARE(sec_font_vi_13);
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -32,12 +33,11 @@ static sec_wifi_ap_t results[SEC_MAX_APS];
 static char report[1500];
 static char diag[480];
 static const char *menus[2][6] = {
-    // ASCII fallbacks until verified Vietnamese glyph font has been generated.
-    {"Wi-Fi", "Bluetooth", "Bao ve", "Phan tich", "Chan doan", "Cai dat"},
+    {"Wi-Fi", "Bluetooth BLE", "Phòng vệ", "Phân tích", "Chẩn đoán", "Cài đặt"},
     {"Wi-Fi", "Bluetooth", "Defense", "Analytics", "Diagnostics", "Settings"},
 };
 static const char *page_names[2][7] = {
-    {"ESP32-SEC", "Wi-Fi", "Bluetooth", "Bao ve", "Phan tich", "Chan doan", "Cai dat"},
+    {"ESP32-SEC", "Wi-Fi", "Bluetooth BLE", "Phòng vệ", "Phân tích", "Chẩn đoán", "Cài đặt"},
     {"ESP32-SEC", "Wi-Fi", "Bluetooth", "Defense", "Analytics", "Diagnostics", "Settings"},
 };
 
@@ -50,7 +50,7 @@ static void persist_language(void) {
 }
 static void render_analytics(void) {
     if (!scan_ready || scan_result != ESP_OK) {
-        lv_label_set_text(body, lang == LANG_VI ? "Quet Wi-Fi truoc de co du lieu." : "Run a Wi-Fi scan first.");
+        lv_label_set_text(body, lang == LANG_VI ? "Quét Wi-Fi trước để có dữ liệu." : "Run a Wi-Fi scan first.");
         return;
     }
     int channel_counts[15]={0}, strongest[15]={0};
@@ -71,7 +71,7 @@ static void render_analytics(void) {
 }
 static void render_defense(void) {
     if (!scan_ready || scan_result!=ESP_OK) {
-        lv_label_set_text(body,lang == LANG_VI ? "Quet Wi-Fi truoc de danh gia." : "Run Wi-Fi scan before assessment.");
+        lv_label_set_text(body,lang == LANG_VI ? "Quét Wi-Fi trước khi đánh giá." : "Run Wi-Fi scan before assessment.");
         return;
     }
     unsigned open=0, repeated=0;
@@ -147,15 +147,15 @@ static void start_cb(lv_event_t *e) {
     if (xTaskCreate(wifi_worker, "wifi_scan", 6144, NULL, 4, NULL) != pdPASS) {
         scan_busy = false;
         lv_label_set_text(body, "Could not start scan task.");
-    } else lv_label_set_text(body, lang == LANG_VI ? "Dang quet..." : "Scanning...");
+    } else lv_label_set_text(body, lang == LANG_VI ? "Đang quét..." : "Scanning...");
 }
 static void render_wifi(void) {
     if (scan_busy) {
-        lv_label_set_text(body, lang == LANG_VI ? "Dang quet Wi-Fi..." : "Scanning Wi-Fi...");
+        lv_label_set_text(body, lang == LANG_VI ? "Đang quét Wi-Fi..." : "Scanning Wi-Fi...");
         return;
     }
     if (!scan_ready) {
-        lv_label_set_text(body, lang == LANG_VI ? "Nhan Scan de tim mang." : "Tap Scan to discover APs.");
+        lv_label_set_text(body, lang == LANG_VI ? "Chạm Quét để tìm mạng." : "Tap Scan to discover APs.");
         return;
     }
     if (scan_result != ESP_OK) {
@@ -194,14 +194,14 @@ static void refresh(void) {
     if (page == PAGE_SETTINGS) lv_obj_remove_flag(lang_btn, LV_OBJ_FLAG_HIDDEN);
     else lv_obj_add_flag(lang_btn, LV_OBJ_FLAG_HIDDEN);
     lv_label_set_text(lv_obj_get_child(lang_btn,0), lang == LANG_VI ? "EN" : "VI");
-    lv_label_set_text(lv_obj_get_child(start_btn,0), ((page==PAGE_WIFI && scan_busy) || (page==PAGE_BLE && ble_busy)) ? "Stop" : "Scan");
+    lv_label_set_text(lv_obj_get_child(start_btn,0), ((page==PAGE_WIFI && scan_busy) || (page==PAGE_BLE && ble_busy)) ? (lang == LANG_VI ? "Dừng" : "Stop") : (lang == LANG_VI ? "Quét" : "Scan"));
     if (page == PAGE_WIFI) render_wifi();
     if (page == PAGE_BLE) render_ble();
     if (page == PAGE_DEFENSE) lv_label_set_text(body,
-        lang == LANG_VI ? "Defense: cho module\ngiam sat thu dong." :
+        lang == LANG_VI ? "Phòng vệ: phân tích thụ động\nđang phát triển." :
                           "Defense: passive monitoring\nmodule pending.");
     if (page == PAGE_ANALYTICS) lv_label_set_text(body,
-        lang == LANG_VI ? "Phan tich kenh: dang phat trien." :
+        lang == LANG_VI ? "Phân tích kênh: đang phát triển." :
                           "Channel analytics: pending.");
     if (page == PAGE_DIAG) {
         size_t feature_total = 0;
@@ -213,7 +213,7 @@ static void refresh(void) {
         lv_label_set_text(body, diag);
     }
     if (page == PAGE_SETTINGS) lv_label_set_text(body, lang == LANG_VI ?
-        "Ngon ngu: VI\nDoi sang English bang nut EN.\n\nChua co font Viet co dau." :
+        "Ngôn ngữ: Tiếng Việt\nChuyển sang English bằng EN." :
         "Language: EN\nSwitch to Vietnamese with VI.\n\nVietnamese font pending.");
 }
 static void ui_timer(lv_timer_t *timer) {
@@ -235,6 +235,7 @@ void sec_ui_init(void) {
     root = lv_screen_active();
     lv_obj_set_style_bg_color(root, lv_color_hex(0x0B1728), 0);
     lv_obj_set_style_text_color(root, lv_color_hex(0xF1F6FE), 0);
+    lv_obj_set_style_text_font(root, &sec_font_vi_13, 0);
     heading = lv_label_create(root);
     lv_obj_set_style_text_font(heading, &lv_font_montserrat_18, 0);
     lv_obj_align(heading, LV_ALIGN_TOP_MID, 0, 9);
@@ -256,13 +257,13 @@ void sec_ui_init(void) {
     lv_obj_align(back_btn, LV_ALIGN_BOTTOM_LEFT, 9, -10);
     lv_obj_add_event_cb(back_btn, back_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *bl = lv_label_create(back_btn);
-    lv_label_set_text(bl, "Back"); lv_obj_center(bl);
+    lv_label_set_text(bl, "Trở về"); lv_obj_center(bl);
     start_btn = lv_button_create(root);
     lv_obj_set_size(start_btn, 86, 37);
     lv_obj_align(start_btn, LV_ALIGN_BOTTOM_RIGHT, -9, -10);
     lv_obj_add_event_cb(start_btn, start_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *sl = lv_label_create(start_btn);
-    lv_label_set_text(sl, "Scan"); lv_obj_center(sl);
+    lv_label_set_text(sl, "Quét"); lv_obj_center(sl);
     lang_btn = lv_button_create(root);
     lv_obj_set_size(lang_btn, 86, 37);
     lv_obj_align(lang_btn, LV_ALIGN_BOTTOM_RIGHT, -9, -10);
