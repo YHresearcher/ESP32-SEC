@@ -12,6 +12,7 @@
 
 static const char *TAG = "SEC_BLE";
 static volatile bool ready = false;
+static volatile bool cancel_requested = false;
 static sec_ble_device_t *scan_out;
 static uint16_t scan_count;
 static void on_sync(void) {
@@ -62,6 +63,7 @@ esp_err_t sec_ble_scan(sec_ble_device_t *out, uint16_t *count) {
     if (!ready) return ESP_ERR_INVALID_STATE;
     uint8_t own_addr_type;
     if (ble_hs_id_infer_auto(0,&own_addr_type) != 0) return ESP_FAIL;
+    cancel_requested=false;
     scan_out=out;
     scan_count=0;
     memset(out,0,sizeof(sec_ble_device_t)*SEC_MAX_BLE);
@@ -70,9 +72,11 @@ esp_err_t sec_ble_scan(sec_ble_device_t *out, uint16_t *count) {
     p.itvl = 0x50; p.window = 0x30;
     int rc = ble_gap_disc(own_addr_type, 5000, &p, ble_event, NULL);
     if(rc != 0) {scan_out=NULL;return ESP_FAIL;}
-    vTaskDelay(pdMS_TO_TICKS(5250));
+    for (int i=0; i<53 && !cancel_requested; i++) vTaskDelay(pdMS_TO_TICKS(100));
     ble_gap_disc_cancel();
     *count=scan_count;
     scan_out=NULL;
     return ESP_OK;
 }
+
+void sec_ble_cancel(void) { cancel_requested = true; }
