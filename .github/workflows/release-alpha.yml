@@ -82,7 +82,8 @@ jobs:
           PY
           (cd release && sha256sum *.bin > SHA256SUMS.txt)
 
-      - name: Publish GitHub prerelease with timestamped assets
+      - name: Publish GitHub prerelease with timestamped assets (optional)
+        continue-on-error: true
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -108,6 +109,7 @@ jobs:
             --title "ESP32-SEC v0.1.1-alpha · ${BUILD_PREFIX}" \
             --notes-file release-notes.md --prerelease
 
+      # A GitHub Release may be blocked by repo Actions token permissions; website deploy is independent.
       - name: Upload website including firmware and manifest
         uses: actions/upload-pages-artifact@v3
         with:
