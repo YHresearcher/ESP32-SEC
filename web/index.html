@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1728"><title>ESP32-SEC · Firmware Installer</title>
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js"></script>
+<style>
+:root{font:16px system-ui,-apple-system,Segoe UI,sans-serif;color:#e9f5ff;background:#071421}*{box-sizing:border-box}
+body{margin:0}main{max-width:900px;margin:auto;padding:24px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+h1{font-size:clamp(30px,6vw,48px);margin:42px 0 10px;line-height:1.1}
+p{color:#b5c9d6;line-height:1.6}.card{border:1px solid #29445b;background:#0f2437;border-radius:16px;padding:22px;margin:20px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+button,.button{cursor:pointer;background:#1c776b;border:0;color:white;font:inherit;padding:10px 16px;border-radius:10px}
+button:disabled{opacity:.5;cursor:not-allowed}.ghost{background:#19364c}
+a{color:#76e9d4}code{background:#173247;padding:2px 5px;border-radius:4px}
+textarea{width:100%;min-height:140px;background:#081928;color:#d9e7ef;border:1px solid #426078;border-radius:8px;padding:12px;resize:vertical}
+small{color:#9dbbc9}.status{padding:12px;border-radius:8px;background:#183348}
+</style></head><body><main>
+<header><strong>🛡 ESP32-SEC</strong><button class="ghost" id="locale">EN</button></header>
+<h1 data-vi="Security Lab cho ESP32-S3" data-en="ESP32-S3 Security Lab">Security Lab cho ESP32-S3</h1>
+<p data-vi="Firmware kiểm tra mạng không dây với màn hình cảm ứng 2.8 inch, EN/VI. ESP32-S3 N16R8 + ST7789V + XPT2046."
+ data-en="Wireless security diagnostics firmware with 2.8-inch touchscreen, EN/VI. ESP32-S3 N16R8 + ST7789V + XPT2046.">Firmware kiểm tra mạng không dây với màn hình cảm ứng 2.8 inch, EN/VI. ESP32-S3 N16R8 + ST7789V + XPT2046.</p>
+<div class="grid">
+<section class="card"><h2 data-vi="Nạp firmware" data-en="Install firmware">Nạp firmware</h2>
+<p data-vi="Chỉ kích hoạt khi đã có bản phát hành được kiểm thử trên phần cứng thật." data-en="Enabled only after a firmware release has passed physical hardware checks.">Chỉ kích hoạt khi đã có bản phát hành được kiểm thử trên phần cứng thật.</p>
+<div id="installer" hidden><esp-web-install-button manifest="./manifest.json"></esp-web-install-button></div>
+<p class="status" id="install-status" aria-live="polite"></p>
+</section>
+<section class="card"><h2 data-vi="Serial Console" data-en="Serial Console">Serial Console</h2>
+<p data-vi="Đọc log USB trên trình duyệt hỗ trợ Web Serial. Không tự động kết nối."
+data-en="Read USB logs on browsers supporting Web Serial. No automatic connection.">Đọc log USB trên trình duyệt hỗ trợ Web Serial. Không tự động kết nối.</p>
+<button id="connect" data-vi="Kết nối USB" data-en="Connect USB">Kết nối USB</button>
+<button id="disconnect" class="ghost" disabled data-vi="Ngắt" data-en="Disconnect">Ngắt</button>
+</section>
+</div>
+<section class="card"><h2>Logs</h2><textarea id="log" readonly aria-label="Serial logs"></textarea></section>
+<section class="card"><h2 data-vi="Lưu ý an toàn" data-en="Safety notes">Lưu ý an toàn</h2>
+<p data-vi="Sao lưu Chibi trước khi nạp. Không sử dụng firmware dành cho board ESP32-DIV gốc. USB data cable và trình duyệt Chrome/Edge desktop được khuyên dùng."
+data-en="Back up Chibi before flashing. Do not flash firmware for the original ESP32-DIV board. Use a USB data cable and Chrome/Edge desktop.">Sao lưu Chibi trước khi nạp. Không sử dụng firmware dành cho board ESP32-DIV gốc. USB data cable và trình duyệt Chrome/Edge desktop được khuyên dùng.</p>
+<a href="https://github.com/YHresearcher/ESP32-SEC">GitHub source</a>
+</section>
+<small>ESP32-SEC · Development preview · No validated release currently published.</small>
+</main><script src="./app.js"></script></body></html>
