@@ -1,0 +1,78 @@
+name: Publish ESP32-SEC alpha release
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/release-alpha.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: esp32-sec-alpha-release
+  cancel-in-progress: false
+
+jobs:
+  alpha:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build firmware
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v6.0.1
+          target: esp32s3
+          path: firmware
+      - name: Validate output files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s firmware/build/bootloader/bootloader.bin
+          test -s firmware/build/partition_table/partition-table.bin
+          test -s firmware/build/esp32_sec.bin
+          test -s firmware/build/flasher_args.json
+          mkdir -p release
+          cp firmware/build/bootloader/bootloader.bin release/bootloader.bin
+          cp firmware/build/partition_table/partition-table.bin release/partition-table.bin
+          cp firmware/build/esp32_sec.bin release/esp32_sec.bin
+          cp firmware/build/flasher_args.json release/flasher_args.json
+          (cd release && sha256sum *.bin > SHA256SUMS.txt)
+      - name: Publish alpha prerelease (never Stable)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="v0.1.0-alpha"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::notice::Release $TAG already exists; not overwriting."
+            exit 0
+          fi
+          cat > release-notes.md <<'NOTES'
+          # ESP32-SEC v0.1.0-alpha (Experimental)
+
+          **UNVERIFIED ON PHYSICAL HARDWARE. DO NOT FLASH AS A STABLE RELEASE.**
+
+          Target: ESP32-S3 N16R8 with ST7789V 240x320 and XPT2046 touchscreen wired to the working Chibi pin profile.
+
+          - Touch GUI, initial bilingual settings (Vietnamese diacritics in firmware incomplete)
+          - Wi-Fi scanning and BLE passive advertisement discovery
+          - Channel density, conservative open AP / repeated SSID observations
+          - Cooperative Wi-Fi/BLE Stop controls
+          - This is a CI-only build. Actual boot, LCD, touch, coexistence, and stability remain untested.
+          - Back up Chibi and ensure USB ROM bootloader recovery before attempting hardware verification.
+          - This release DOES NOT authorize website flashing. No public install manifest is published.
+
+          **Files:** firmware application, bootloader, partition table, flasher_args.json and SHA256SUMS.txt. Use the exact flash offsets from flasher_args.json; don't guess offsets.
+
+          Documentation: docs/HARDWARE-TEST.md
+          NOTES
+          gh release create "$TAG" release/*.bin release/flasher_args.json release/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "ESP32-SEC v0.1.0-alpha (UNVERIFIED)" \
+            --notes-file release-notes.md \
+            --prerelease \
+            --verify-tag
