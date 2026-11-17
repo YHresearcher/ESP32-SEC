@@ -5,19 +5,16 @@ const log = document.getElementById("log");
 const connect = document.getElementById("connect");
 const disconnect = document.getElementById("disconnect");
 let port = null, reader = null, reading = false;
-const consent = document.getElementById("flash-consent");
 const installer = document.getElementById("installer");
 const firmwareName = document.getElementById("firmware-name");
 let manifestAvailable = false;
 let publishedVersion = "";
 function updateFlasher() {
-  installer.hidden = !(manifestAvailable && consent.checked);
+  installer.hidden = !manifestAvailable;
   firmwareName.textContent = publishedVersion ? (locale === "vi" ? "Bản build: " : "Build: ") + publishedVersion : "";
   status.textContent = !manifestAvailable
-    ? (locale === "vi" ? "Chưa có firmware trên website; kiểm tra GitHub Releases." : "No installable firmware is hosted here; see GitHub Releases.")
-    : !consent.checked
-      ? (locale === "vi" ? "Xác nhận sao lưu và đúng board để mở nút Nạp firmware." : "Confirm backup and target hardware to unlock Install.")
-      : (locale === "vi" ? "Đã mở nạp bản alpha. Chọn CONNECT và xác nhận thiết bị trong trình duyệt." : "Experimental alpha install unlocked. Select CONNECT and confirm your device.");
+    ? (locale === "vi" ? "Firmware đang được xuất bản; kiểm tra Releases nếu chưa thấy nút Nạp." : "Firmware publishing pending; check Releases if Install is not visible.")
+    : (locale === "vi" ? "Nhấn CONNECT để nạp bản alpha lên ESP32-S3." : "Press CONNECT to flash the alpha onto ESP32-S3.");
 }
 function render() {
   document.documentElement.lang = locale;
@@ -29,7 +26,6 @@ localeButton.addEventListener("click", () => {
   locale = locale === "vi" ? "en" : "vi"; localStorage.setItem("sec_lang", locale); render();
 });
 // Firmware binaries and the chip-specific manifest are published to this same HTTPS origin.
-consent.addEventListener("change", updateFlasher);
 (async () => {
   try {
     const r = await fetch("./manifest.json", {cache:"no-store"});
