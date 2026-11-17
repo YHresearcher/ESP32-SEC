@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/release-alpha.yml"
       - "firmware/**"
+      - "web/**"
   workflow_dispatch:
 
 permissions:
@@ -91,8 +92,8 @@ jobs:
           # ESP32-SEC v0.1.1 alpha — EXPERIMENTAL
           Hardware: ESP32-S3 N16R8, ST7789V 240x320, XPT2046 (existing Chibi wiring).
           The firmware compiled in CI but has NOT passed a physical-device smoke test.
-          The public web flasher now permits opt-in flashing after explicit user confirmation.
-          Backup the existing Chibi firmware and settings first; ensure ROM download/recovery works.
+          The public web flasher offers direct installation after the standard browser USB permission dialog.
+          Choose the correct USB device. This is an experimental build and may not boot correctly.
           Includes Wi-Fi survey, BLE passive discovery, basic analytics and six-button touchscreen UI.
           Vietnamese text on the device still has unaccented fallbacks. No jamming/disruption tools.
           Flash offsets are generated from ESP-IDF flasher_args.json, not hand-entered.
