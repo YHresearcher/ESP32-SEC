@@ -112,7 +112,12 @@ jobs:
             "new_install_improv_wait_time":0,
             "builds":[{"chipFamily":"ESP32-S3","parts":[{"path":merged,"offset":0}]}]
           }
-          Path("web/manifest.json").write_text(json.dumps(manifest,indent=2,ensure_ascii=False))
+          # Publish immutable version-specific manifest alongside latest pointer.
+          # This prevents ESP Web Tools from silently loading a newer/older build
+          # than the one shown on the page when GitHub Pages or browser caches.
+          payload=json.dumps(manifest,indent=2,ensure_ascii=False)
+          Path("web/manifest.json").write_text(payload)
+          Path("web",f"manifest-{prefix}.json").write_text(payload)
           Path("release",f"{prefix}_merged.bin").write_bytes(Path("web",merged).read_bytes())
           PYMERGE
           (cd release && sha256sum *.bin > SHA256SUMS.txt)
