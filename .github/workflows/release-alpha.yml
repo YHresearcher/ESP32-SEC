@@ -1,4 +1,4 @@
-name: Publish ESP32-SEC alpha release
+name: Build, release and publish ESP32-SEC alpha flasher
 on:
   push:
     branches: [main]
@@ -8,70 +8,108 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
-  group: esp32-sec-alpha-release
+  group: esp32-sec-alpha-publish
   cancel-in-progress: false
 
 jobs:
   alpha:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build firmware
+      - name: Build ESP32-S3 firmware
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: v6.0.1
           target: esp32s3
           path: firmware
-      - name: Validate output files
+
+      - name: Package timestamped binaries and installer manifest
         shell: bash
         run: |
           set -euo pipefail
+          STAMP="$(TZ=Asia/Ho_Chi_Minh date +'%d-%m-%Y_%H-%M')"
+          TAGSTAMP="$(TZ=Asia/Ho_Chi_Minh date +'%Y%m%d-%H%M')"
+          PREFIX="ESP32-SEC_v0.1.1-alpha_${STAMP}"
+          echo "RELEASE_TAG=v0.1.1-alpha-${TAGSTAMP}" >> "$GITHUB_ENV"
+          echo "BUILD_PREFIX=$PREFIX" >> "$GITHUB_ENV"
+          mkdir -p release web/firmware
+
+          test -s firmware/build/esp32_sec.bin
           test -s firmware/build/bootloader/bootloader.bin
           test -s firmware/build/partition_table/partition-table.bin
-          test -s firmware/build/esp32_sec.bin
           test -s firmware/build/flasher_args.json
-          mkdir -p release
-          cp firmware/build/bootloader/bootloader.bin release/bootloader.bin
-          cp firmware/build/partition_table/partition-table.bin release/partition-table.bin
-          cp firmware/build/esp32_sec.bin release/esp32_sec.bin
-          cp firmware/build/flasher_args.json release/flasher_args.json
+          cp firmware/build/bootloader/bootloader.bin "release/${PREFIX}_bootloader.bin"
+          cp firmware/build/partition_table/partition-table.bin "release/${PREFIX}_partitions.bin"
+          cp firmware/build/esp32_sec.bin "release/${PREFIX}_firmware.bin"
+          cp firmware/build/flasher_args.json "release/${PREFIX}_flasher_args.json"
+          cp release/*.bin web/firmware/
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          src=json.loads(Path('firmware/build/flasher_args.json').read_text())
+          prefix=os.environ.get('BUILD_PREFIX')
+          # BUILD_PREFIX in GITHUB_ENV takes effect in the next step. Resolve from copied filename.
+          if not prefix:
+              prefix=next(Path('release').glob('*_firmware.bin')).name.removesuffix('_firmware.bin')
+          mapping={
+              'bootloader.bin':f'firmware/{prefix}_bootloader.bin',
+              'partition-table.bin':f'firmware/{prefix}_partitions.bin',
+              'esp32_sec.bin':f'firmware/{prefix}_firmware.bin',
+          }
+          files=src.get('flash_files')
+          if not isinstance(files,dict): raise SystemExit('Missing flash_files in flasher_args.json')
+          parts=[]
+          for offset,path in files.items():
+              name=Path(path).name
+              if name not in mapping: raise SystemExit(f'Unexpected flash part: {path}')
+              parts.append({'path':mapping[name],'offset':int(offset,0)})
+          if len(parts)!=3: raise SystemExit(f'Expected 3 flash parts; got {parts}')
+          parts.sort(key=lambda p:p['offset'])
+          manifest={'name':'ESP32-SEC ESP32-S3 N16R8 Experimental','version':prefix,
+                    'builds':[{'chipFamily':'ESP32-S3','parts':parts}]}
+          Path('web/manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2))
+          print('Verified manifest parts:',parts)
+          PY
           (cd release && sha256sum *.bin > SHA256SUMS.txt)
-      - name: Publish alpha prerelease (never Stable)
+
+      - name: Publish GitHub prerelease with timestamped assets
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="v0.1.0-alpha"
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "::notice::Release $TAG already exists; not overwriting."
-            exit 0
-          fi
           cat > release-notes.md <<'NOTES'
-          # ESP32-SEC v0.1.0-alpha (Experimental)
-
-          **UNVERIFIED ON PHYSICAL HARDWARE. DO NOT FLASH AS A STABLE RELEASE.**
-
-          Target: ESP32-S3 N16R8 with ST7789V 240x320 and XPT2046 touchscreen wired to the working Chibi pin profile.
-
-          - Touch GUI, initial bilingual settings (Vietnamese diacritics in firmware incomplete)
-          - Wi-Fi scanning and BLE passive advertisement discovery
-          - Channel density, conservative open AP / repeated SSID observations
-          - Cooperative Wi-Fi/BLE Stop controls
-          - This is a CI-only build. Actual boot, LCD, touch, coexistence, and stability remain untested.
-          - Back up Chibi and ensure USB ROM bootloader recovery before attempting hardware verification.
-          - This release DOES NOT authorize website flashing. No public install manifest is published.
-
-          **Files:** firmware application, bootloader, partition table, flasher_args.json and SHA256SUMS.txt. Use the exact flash offsets from flasher_args.json; don't guess offsets.
-
-          Documentation: docs/HARDWARE-TEST.md
+          # ESP32-SEC v0.1.1 alpha — EXPERIMENTAL
+          Hardware: ESP32-S3 N16R8, ST7789V 240x320, XPT2046 (existing Chibi wiring).
+          The firmware compiled in CI but has NOT passed a physical-device smoke test.
+          The public web flasher now permits opt-in flashing after explicit user confirmation.
+          Backup the existing Chibi firmware and settings first; ensure ROM download/recovery works.
+          Includes Wi-Fi survey, BLE passive discovery, basic analytics and six-button touchscreen UI.
+          Vietnamese text on the device still has unaccented fallbacks. No jamming/disruption tools.
+          Flash offsets are generated from ESP-IDF flasher_args.json, not hand-entered.
           NOTES
-          gh release create "$TAG" release/*.bin release/flasher_args.json release/SHA256SUMS.txt \
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Timestamp release tag already exists: $RELEASE_TAG"
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" release/*.bin release/*_flasher_args.json release/SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "ESP32-SEC v0.1.0-alpha (UNVERIFIED)" \
-            --notes-file release-notes.md \
-            --prerelease
+            --title "ESP32-SEC v0.1.1-alpha · ${BUILD_PREFIX}" \
+            --notes-file release-notes.md --prerelease
+
+      - name: Upload website including firmware and manifest
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./web
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
