@@ -2,6 +2,7 @@
 #include "wifi_scan.h"
 #include "ble_scan.h"
 #include "feature_registry.h"
+#include "security_audit.h"
 #include "esp_lvgl_port.h"
 #include "esp_log.h"
 #include "nvs.h"
@@ -18,10 +19,10 @@ LV_FONT_DECLARE(sec_font_vi_13);
 
 typedef enum { LANG_VI, LANG_EN } lang_t;
 typedef enum { PAGE_HOME, PAGE_WIFI, PAGE_BLE, PAGE_DEFENSE,
-               PAGE_ANALYTICS, PAGE_DIAG, PAGE_SETTINGS } page_t;
+               PAGE_ANALYTICS, PAGE_DIAG, PAGE_SETTINGS, PAGE_LAB, PAGE_MODULES } page_t;
 static lang_t lang = LANG_VI;
 static page_t page = PAGE_HOME;
-static lv_obj_t *root, *heading, *body, *back_btn, *start_btn, *lang_btn, *tiles[6];
+static lv_obj_t *root, *heading, *body, *back_btn, *start_btn, *lang_btn, *tiles[8];
 static volatile bool scan_busy = false, scan_ready = false;
 static volatile bool ble_busy = false, ble_ready = false;
 static esp_err_t ble_result = ESP_OK;
@@ -32,15 +33,14 @@ static uint16_t ap_count = 0;
 static sec_wifi_ap_t results[SEC_MAX_APS];
 static char report[1500];
 static char diag[480];
-static const char *menus[2][6] = {
-    {"Wi-Fi", "Bluetooth BLE", "Phòng vệ", "Phân tích", "Chẩn đoán", "Cài đặt"},
-    {"Wi-Fi", "Bluetooth", "Defense", "Analytics", "Diagnostics", "Settings"},
+static const char *menus[2][8] = {
+    {"Wi-Fi", "Bluetooth BLE", "Phòng vệ", "Phân tích", "Chẩn đoán", "Cài đặt", "Pentest Lab", "Mô-đun"},
+    {"Wi-Fi", "Bluetooth BLE", "Defense", "Analytics", "Diagnostics", "Settings", "Pentest Lab", "Modules"},
 };
-static const char *page_names[2][7] = {
-    {"ESP32-SEC", "Wi-Fi", "Bluetooth BLE", "Phòng vệ", "Phân tích", "Chẩn đoán", "Cài đặt"},
-    {"ESP32-SEC", "Wi-Fi", "Bluetooth", "Defense", "Analytics", "Diagnostics", "Settings"},
+static const char *page_names[2][9] = {
+    {"ESP32-SEC", "Wi-Fi Audit", "Bluetooth BLE", "Phòng vệ", "Phân tích", "Chẩn đoán", "Cài đặt", "Pentest Lab", "Mô-đun"},
+    {"ESP32-SEC", "Wi-Fi Audit", "Bluetooth BLE", "Defense", "Analytics", "Diagnostics", "Settings", "Pentest Lab", "Modules"},
 };
-
 static void persist_language(void) {
     nvs_handle_t h;
     if (nvs_open("sec_ui", NVS_READWRITE, &h) != ESP_OK) return;
@@ -50,44 +50,46 @@ static void persist_language(void) {
 }
 static void render_analytics(void) {
     if (!scan_ready || scan_result != ESP_OK) {
-        lv_label_set_text(body, lang == LANG_VI ? "Quét Wi-Fi trước để có dữ liệu." : "Run a Wi-Fi scan first.");
+        lv_label_set_text(body, lang == LANG_VI ? "Quét Wi-Fi để phân tích mật độ kênh." : "Scan Wi-Fi to analyze channel density.");
         return;
     }
-    int channel_counts[15]={0}, strongest[15]={0};
-    for (uint16_t i=0;i<ap_count;i++) {
-        unsigned ch=results[i].channel;
-        if(ch<1 || ch>14) continue;
-        channel_counts[ch]++;
-        if(strongest[ch]==0 || results[i].rssi>strongest[ch]) strongest[ch]=results[i].rssi;
-    }
-    size_t used=(size_t)snprintf(report,sizeof(report),"2.4 GHz channels\\n%u APs\\n\\n",ap_count);
-    for(int ch=1;ch<=14 && used<sizeof(report)-70;ch++){
-        int n=snprintf(report+used,sizeof(report)-used,
-            "CH%02d  %2d APs  %4d dBm\\n",ch,channel_counts[ch],strongest[ch]);
-        if(n<=0 || (size_t)n>=sizeof(report)-used)break;
-        used+=(size_t)n;
-    }
-    lv_label_set_text(body,report);
+    sec_wifi_audit_t a;
+    sec_wifi_audit(results, ap_count, &a);
+    snprintf(report, sizeof(report),
+        lang == LANG_VI ?
+        "PHÂN TÍCH 2.4 GHz\nAP quan sát: %u\nKênh ít AP nhất: %d\n(Chưa đo nhiễu thực tế)\n\nCH01: %d AP\nCH06: %d AP\nCH11: %d AP\n\nRSSI mạnh nhất: %d dBm" :
+        "2.4 GHz ANALYTICS\nObserved APs: %u\nLeast occupied: CH%d\n(No RF interference measurement)\n\nCH01: %d AP\nCH06: %d AP\nCH11: %d AP\n\nStrongest: %d dBm",
+        a.total, a.recommended_channel, a.channels[1], a.channels[6],
+        a.channels[11], a.signal_best);
+    lv_label_set_text(body, report);
 }
 static void render_defense(void) {
-    if (!scan_ready || scan_result!=ESP_OK) {
-        lv_label_set_text(body,lang == LANG_VI ? "Quét Wi-Fi trước khi đánh giá." : "Run Wi-Fi scan before assessment.");
+    if (!scan_ready || scan_result != ESP_OK) {
+        lv_label_set_text(body, lang == LANG_VI ? "Quét Wi-Fi để đánh giá bảo mật." : "Run Wi-Fi scan before audit.");
         return;
     }
-    unsigned open=0, repeated=0;
-    for(uint16_t i=0;i<ap_count;i++){
-        if(results[i].authmode==0)open++;
-        for(uint16_t j=0;j<i;j++){
-            if(results[i].ssid[0] && strcmp(results[i].ssid,results[j].ssid)==0 &&
-               strcmp(results[i].bssid,results[j].bssid)!=0) {repeated++;break;}
-        }
-    }
-    snprintf(report,sizeof(report),
-        "%u access points\\n%u open networks observed\\n%u repeated SSIDs\\n\\n"
-        "Notes:\\nOpen network = no Wi-Fi encryption.\\n"
-        "Repeated SSID is common in mesh\\nand enterprise networks; it\\nis NOT proof of an attack.\\n"
-        "Assess only authorized networks.",ap_count,open,repeated);
+    sec_wifi_audit_t a;
+    sec_wifi_audit(results, ap_count, &a);
+    snprintf(report, sizeof(report),
+        lang == LANG_VI ?
+        "ĐÁNH GIÁ CẤU HÌNH\n\nAP: %u\nMạng mở: %u\nWEP: %u\nWPA cũ: %u\nSSID trùng: %u\nẨn tên: %u\n\nKhuyến nghị: dùng WPA2/WPA3.\nMạng mở không mã hóa.\nSSID trùng không chứng minh tấn công." :
+        "CONFIGURATION AUDIT\n\nAPs: %u\nOpen: %u\nWEP: %u\nLegacy WPA: %u\nRepeated SSID: %u\nHidden: %u\n\nPrefer WPA2/WPA3.\nRepeated SSID does not prove an attack.",
+        a.total,a.open,a.wep,a.weak_legacy,a.duplicate_ssid,a.hidden);
+    lv_label_set_text(body, report);
+}
+static void render_lab(void) {
+    unsigned passed=0,total=0;
+    bool ok=sec_lab_parser_selftest(&passed,&total);
+    snprintf(report,sizeof(report),lang == LANG_VI ?
+       "PENTEST LAB - CỤC BỘ\n\nPoC kiểm tra parser\n%u/%u bài: %s\n\nKiểm tra giới hạn bộ đệm,\nchuỗi rỗng, độ dài không hợp lệ.\n\nKhông gửi gói tin.\nKhông khai thác thiết bị khác.\n\nChưa có PoC mạng bên ngoài." :
+       "LOCAL PENTEST LAB\n\nParser validation PoC\n%u/%u tests: %s\n\nChecks bounds, empty strings,\nand invalid lengths.\n\nNo packets transmitted.\nNo external exploit installed.",
+       passed,total,ok ? "PASS" : "FAIL");
     lv_label_set_text(body,report);
+}
+static void render_modules(void) {
+    lv_label_set_text(body,lang == LANG_VI ?
+      "MÔ-ĐUN NGOẠI VI\n\nNRF24: Cần phần cứng\nCC1101: Cần phần cứng\nIR: Cần phần cứng\nNFC/RFID: Cần phần cứng\nGNSS: Cần phần cứng\nmicroSD: Cần phần cứng\n\nDriver chưa kích hoạt.\nCần xác nhận sơ đồ chân." :
+      "EXTENSION MODULES\n\nNRF24: Hardware needed\nCC1101: Hardware needed\nIR: Hardware needed\nNFC/RFID: Hardware needed\nGNSS: Hardware needed\nmicroSD: Hardware needed\n\nDrivers not enabled.");
 }
 static void refresh(void);
 static void back_cb(lv_event_t *e) { (void)e; page = PAGE_HOME; refresh(); }
@@ -177,7 +179,7 @@ static void render_wifi(void) {
 static void refresh(void) {
     lv_label_set_text(heading, page_names[lang][page]);
     bool home = page == PAGE_HOME;
-    for (int i=0;i<6;i++) {
+    for (int i=0;i<8;i++) {
         if (home) lv_obj_remove_flag(tiles[i], LV_OBJ_FLAG_HIDDEN);
         else lv_obj_add_flag(tiles[i], LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(lv_obj_get_child(tiles[i],0), menus[lang][i]);
@@ -197,12 +199,10 @@ static void refresh(void) {
     lv_label_set_text(lv_obj_get_child(start_btn,0), ((page==PAGE_WIFI && scan_busy) || (page==PAGE_BLE && ble_busy)) ? (lang == LANG_VI ? "Dừng" : "Stop") : (lang == LANG_VI ? "Quét" : "Scan"));
     if (page == PAGE_WIFI) render_wifi();
     if (page == PAGE_BLE) render_ble();
-    if (page == PAGE_DEFENSE) lv_label_set_text(body,
-        lang == LANG_VI ? "Phòng vệ: phân tích thụ động\nđang phát triển." :
-                          "Defense: passive monitoring\nmodule pending.");
-    if (page == PAGE_ANALYTICS) lv_label_set_text(body,
-        lang == LANG_VI ? "Phân tích kênh: đang phát triển." :
-                          "Channel analytics: pending.");
+    if (page == PAGE_DEFENSE) render_defense();
+    if (page == PAGE_ANALYTICS) render_analytics();
+    if (page == PAGE_LAB) render_lab();
+    if (page == PAGE_MODULES) render_modules();
     if (page == PAGE_DIAG) {
         size_t feature_total = 0;
         sec_feature_catalog(&feature_total);
@@ -238,12 +238,16 @@ void sec_ui_init(void) {
     lv_obj_set_style_text_font(root, &sec_font_vi_13, 0);
     heading = lv_label_create(root);
     lv_obj_set_style_text_font(heading, &lv_font_montserrat_18, 0);
+    lv_obj_set_style_text_color(heading, lv_color_hex(0x4BE1D9), 0);
     lv_obj_align(heading, LV_ALIGN_TOP_MID, 0, 9);
-    for (int i=0;i<6;i++) {
+    for (int i=0;i<8;i++) {
         tiles[i] = lv_button_create(root);
-        lv_obj_set_size(tiles[i], 106, 67);
-        lv_obj_set_pos(tiles[i], 10+(i%2)*114, 42+(i/2)*80);
-        lv_obj_set_style_bg_color(tiles[i], lv_color_hex(0x173A55), 0);
+        lv_obj_set_size(tiles[i], 106, 54);
+        lv_obj_set_pos(tiles[i], 10+(i%2)*114, 42+(i/2)*62);
+        lv_obj_set_style_bg_color(tiles[i], lv_color_hex(0x14364C), 0);
+        lv_obj_set_style_border_width(tiles[i], 1, 0);
+        lv_obj_set_style_border_color(tiles[i], lv_color_hex(0x21A9B1), 0);
+        lv_obj_set_style_radius(tiles[i], 9, 0);
         lv_obj_add_event_cb(tiles[i], tile_cb, LV_EVENT_CLICKED, (void*)(uintptr_t)i);
         lv_obj_t *label = lv_label_create(tiles[i]);
         lv_obj_center(label);
