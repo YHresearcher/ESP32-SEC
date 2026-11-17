@@ -19,7 +19,7 @@ typedef enum { PAGE_HOME, PAGE_WIFI, PAGE_BLE, PAGE_DEFENSE,
                PAGE_ANALYTICS, PAGE_DIAG, PAGE_SETTINGS } page_t;
 static lang_t lang = LANG_VI;
 static page_t page = PAGE_HOME;
-static lv_obj_t *root, *heading, *panel, *body, *back_btn, *start_btn, *lang_btn, *tiles[6];
+static lv_obj_t *root, *heading, *body, *back_btn, *start_btn, *lang_btn, *tiles[6];
 static volatile bool scan_busy = false, scan_ready = false;
 static volatile bool ble_busy = false, ble_ready = false;
 static esp_err_t ble_result = ESP_OK;
@@ -181,10 +181,10 @@ static void refresh(void) {
         lv_label_set_text(lv_obj_get_child(tiles[i],0), menus[lang][i]);
     }
     if (home) {
-        lv_obj_add_flag(panel, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(body, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(back_btn, LV_OBJ_FLAG_HIDDEN);
     } else {
-        lv_obj_remove_flag(panel, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(body, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(back_btn, LV_OBJ_FLAG_HIDDEN);
     }
     if (page == PAGE_WIFI || page == PAGE_BLE) lv_obj_remove_flag(start_btn, LV_OBJ_FLAG_HIDDEN);
