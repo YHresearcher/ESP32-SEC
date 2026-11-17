@@ -50,3 +50,15 @@ Read [Architecture](docs/ARCHITECTURE.md) and [Acceptance criteria](docs/ACCEPTA
 - [ESP32-DIV](https://github.com/cifertech/ESP32-DIV) — MIT licensed architecture reference (not directly vendored).
 - [ESP32 Marauder](https://github.com/justcallmekoko/ESP32Marauder) — reference only.
 - [ModESP32](https://github.com/YHresearcher/ModESP32) — working Chibi LCD/touch pin profile.
+
+
+## ESP32-DIV integration (work in progress)
+
+The [upstream ESP32-DIV](https://github.com/cifertech/ESP32-DIV) feature inventory and a hardware compatibility matrix are tracked in [docs/ESP32-DIV-INTEGRATION.md](docs/ESP32-DIV-INTEGRATION.md).
+
+- The existing ESP32-S3 Wi-Fi and NimBLE passive scan integrations are retained. BLE scan results are now connected to the screen, and host synchronization is awaited before scanning. **Physical-device verification remains necessary.**
+- A compiled feature registry records currently integrated firmware modules versus future NRF24, CC1101, IR, NFC/RFID, GNSS and microSD modules. Registry entries never imply that a missing peripheral is installed.
+- A build-time Vietnamese LVGL 9 font generator rasterizes Unicode glyphs; it requires Pillow and DejaVu Sans on the CI runner. Source TTF files are **not** committed to the firmware image.
+- Dangerous disruptive and impersonation modules are explicitly excluded. This is not a wholesale copy of ESP32-DIV Arduino code: the board uses ESP-IDF, LVGL 9, and an ST7789V screen, not upstream ILI9341 wiring.
+
+**Release status:** experimental. CI compilation verifies builds, not on-device compatibility, radio performance, or touchscreen calibration.
