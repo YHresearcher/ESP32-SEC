@@ -1,6 +1,7 @@
 #include "ui.h"
 #include "wifi_scan.h"
 #include "ble_scan.h"
+#include "feature_registry.h"
 #include "esp_lvgl_port.h"
 #include "esp_log.h"
 #include "nvs.h"
@@ -203,9 +204,12 @@ static void refresh(void) {
         lang == LANG_VI ? "Phan tich kenh: dang phat trien." :
                           "Channel analytics: pending.");
     if (page == PAGE_DIAG) {
+        size_t feature_total = 0;
+        sec_feature_catalog(&feature_total);
         snprintf(diag, sizeof(diag),
-            "ESP32-S3 N16R8\nPSRAM: %u KB\nFree heap: %u KB\nLCD: ST7789V 240x320\nTouch: XPT2046\nBL: not controlled\nFW: M1-M3 dev",
-            (unsigned)(esp_psram_get_size()/1024), (unsigned)(esp_get_free_heap_size()/1024));
+            "ESP32-S3 N16R8\nPSRAM: %u KB\nFree heap: %u KB\nLCD: ST7789V 240x320\nTouch: XPT2046\nBL: not controlled\nRegistry: %u built / %u planned",
+            (unsigned)(esp_psram_get_size()/1024), (unsigned)(esp_get_free_heap_size()/1024),
+            (unsigned)sec_feature_compiled_count(), (unsigned)feature_total);
         lv_label_set_text(body, diag);
     }
     if (page == PAGE_SETTINGS) lv_label_set_text(body, lang == LANG_VI ?
