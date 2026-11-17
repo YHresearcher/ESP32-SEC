@@ -252,7 +252,7 @@ void sec_ui_init(void) {
     lv_obj_set_style_text_color(root, lv_color_hex(0xF1F6FE), 0);
     lv_obj_set_style_text_font(root, &sec_font_vi_13, 0);
     heading = lv_label_create(root);
-    lv_obj_set_style_text_font(heading, &lv_font_montserrat_18, 0);
+    lv_obj_set_style_text_font(heading, &sec_font_vi_13, 0);
     lv_obj_set_style_text_color(heading, lv_color_hex(0x4BE1D9), 0);
     lv_obj_align(heading, LV_ALIGN_TOP_MID, 0, 9);
     for (int i=0;i<8;i++) {
