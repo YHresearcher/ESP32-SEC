@@ -1,43 +1,60 @@
 <!doctype html>
-<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0b1728"><title>ESP32-SEC · Firmware Installer</title>
-<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js"></script>
-<style>
-:root{font:16px system-ui,-apple-system,Segoe UI,sans-serif;color:#e9f5ff;background:#071421}*{box-sizing:border-box}
-body{margin:0}main{max-width:900px;margin:auto;padding:24px}
-header{display:flex;justify-content:space-between;align-items:center;gap:12px}
-h1{font-size:clamp(30px,6vw,48px);margin:42px 0 10px;line-height:1.1}
-p{color:#b5c9d6;line-height:1.6}.card{border:1px solid #29445b;background:#0f2437;border-radius:16px;padding:22px;margin:20px 0}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
-button,.button{cursor:pointer;background:#1c776b;border:0;color:white;font:inherit;padding:10px 16px;border-radius:10px}
-button:disabled{opacity:.5;cursor:not-allowed}.ghost{background:#19364c}
-a{color:#76e9d4}code{background:#173247;padding:2px 5px;border-radius:4px}
-textarea{width:100%;min-height:140px;background:#081928;color:#d9e7ef;border:1px solid #426078;border-radius:8px;padding:12px;resize:vertical}
-small{color:#9dbbc9}.status{padding:12px;border-radius:8px;background:#183348}
-</style></head><body><main>
-<header><strong>🛡 ESP32-SEC</strong><button class="ghost" id="locale">EN</button></header>
-<h1 data-vi="Security Lab cho ESP32-S3" data-en="ESP32-S3 Security Lab">Security Lab cho ESP32-S3</h1>
-<p data-vi="Firmware kiểm tra mạng không dây với màn hình cảm ứng 2.8 inch, EN/VI. ESP32-S3 N16R8 + ST7789V + XPT2046."
- data-en="Wireless security diagnostics firmware with 2.8-inch touchscreen, EN/VI. ESP32-S3 N16R8 + ST7789V + XPT2046.">Firmware kiểm tra mạng không dây với màn hình cảm ứng 2.8 inch, EN/VI. ESP32-S3 N16R8 + ST7789V + XPT2046.</p>
-<div class="grid">
-<section class="card"><h2 data-vi="Nạp firmware" data-en="Install firmware">Nạp firmware</h2>
-<p data-vi="Bản alpha thử nghiệm. Bạn chủ động chọn thiết bị và xác nhận nạp trên trình duyệt." data-en="Experimental alpha. Choose your device and confirm flashing in the browser.">Bản alpha thử nghiệm. Bạn chủ động chọn thiết bị và xác nhận nạp trên trình duyệt.</p>
-<p id="firmware-name" class="status"></p>
-<div id="installer" hidden><esp-web-install-button manifest="./manifest.json"></esp-web-install-button></div>
-<p class="status" id="install-status" aria-live="polite"></p>
-</section>
-<section class="card"><h2 data-vi="Serial Console" data-en="Serial Console">Serial Console</h2>
-<p data-vi="Đọc log USB trên trình duyệt hỗ trợ Web Serial. Không tự động kết nối."
-data-en="Read USB logs on browsers supporting Web Serial. No automatic connection.">Đọc log USB trên trình duyệt hỗ trợ Web Serial. Không tự động kết nối.</p>
-<button id="connect" data-vi="Kết nối USB" data-en="Connect USB">Kết nối USB</button>
-<button id="disconnect" class="ghost" disabled data-vi="Ngắt" data-en="Disconnect">Ngắt</button>
-</section>
-</div>
-<section class="card"><h2>Logs</h2><textarea id="log" readonly aria-label="Serial logs"></textarea></section>
-<section class="card"><h2 data-vi="Lưu ý an toàn" data-en="Safety notes">Lưu ý an toàn</h2>
-<p data-vi="Firmware dành cho ESP32-S3 N16R8 với màn hình 2.8 inch theo cấu hình dự án. Sử dụng cáp USB dữ liệu và Chrome/Edge trên máy tính."
-data-en="Firmware targets ESP32-S3 N16R8 with the project's 2.8-inch display wiring. Use a USB data cable and Chrome/Edge on desktop.">Firmware dành cho ESP32-S3 N16R8 với màn hình 2.8 inch theo cấu hình dự án. Sử dụng cáp USB dữ liệu và Chrome/Edge trên máy tính.</p>
-<a href="https://github.com/YHresearcher/ESP32-SEC">GitHub source</a>
-</section>
-<small>ESP32-SEC · Alpha Experimental · Only flash on your own compatible board.</small>
-</main><script src="./app.js"></script></body></html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1220">
+  <title>ESP32-SEC — Flash Firmware</title>
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js"></script>
+  <style>
+    :root{font:16px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#eef5fc;background:#0b1220;color-scheme:dark}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:20px}
+    main{width:100%;max-width:410px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+    .brand{font-weight:750;letter-spacing:.04em}
+    button{font:inherit;cursor:pointer}
+    .lang{background:transparent;border:1px solid #39506a;border-radius:9px;color:#dbe8f5;padding:7px 12px;font-size:13px}
+    .panel{background:#152136;border:1px solid #31435d;border-radius:20px;padding:26px;text-align:center}
+    .symbol{display:grid;place-items:center;width:56px;height:56px;margin:0 auto 14px;border-radius:16px;background:#183c45;color:#66ead0;font-size:28px}
+    h1{font-size:25px;line-height:1.25;margin:0 0 8px}
+    .subtitle{color:#a5b8cd;font-size:14px;margin:0 0 20px}
+    .version{background:#0e1a2d;border:1px solid #283f57;border-radius:10px;padding:12px;font-size:12px;overflow-wrap:anywhere;color:#bad0e1;margin-bottom:20px}
+    #installer{margin:0 auto}
+    esp-web-install-button{display:block}
+    esp-web-install-button::part(button){width:100%;border:none;border-radius:11px;padding:13px 20px;background:#3ed6b7;color:#08201b;font:700 16px system-ui;cursor:pointer}
+    #status{font-size:13px;line-height:1.5;color:#aabed2;margin:16px 0 0}
+    footer{display:flex;justify-content:center;gap:14px;margin-top:18px;font-size:12px;color:#8aa2b8}
+    a{color:#9bb6cd;text-decoration:none}
+    a:hover{text-decoration:underline}
+    [hidden]{display:none!important}
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="brand">ESP32-SEC</span>
+    <button id="locale" class="lang" type="button" aria-label="Switch language">EN</button>
+  </header>
+  <section class="panel">
+    <div class="symbol" aria-hidden="true">⬇</div>
+    <h1 data-vi="Nạp firmware" data-en="Flash firmware">Nạp firmware</h1>
+    <p class="subtitle">ESP32-S3 N16R8 · 2.8″ Touch</p>
+    <div id="version" class="version" aria-live="polite">...</div>
+    <div id="installer" hidden>
+      <esp-web-install-button manifest="./manifest.json">
+        <button slot="activate" type="button" style="width:100%;background:#3ed6b7;border:0;border-radius:11px;padding:14px;color:#07251d;font-weight:750" data-vi="Kết nối & Nạp firmware" data-en="Connect & Flash firmware">Kết nối & Nạp firmware</button>
+        <span slot="unsupported" data-vi="Dùng Chrome hoặc Edge trên máy tính để nạp qua USB." data-en="Use desktop Chrome or Edge to flash over USB.">Dùng Chrome hoặc Edge trên máy tính để nạp qua USB.</span>
+        <span slot="not-allowed" data-vi="Trang cần HTTPS để truy cập USB." data-en="HTTPS is required for USB access.">Trang cần HTTPS để truy cập USB.</span>
+      </esp-web-install-button>
+    </div>
+    <p id="status" aria-live="polite"></p>
+  </section>
+  <footer>
+    <span>Alpha · ESP32-S3</span>
+    <a href="https://github.com/YHresearcher/ESP32-SEC" target="_blank" rel="noopener">GitHub</a>
+  </footer>
+</main>
+<script src="./app.js"></script>
+</body>
+</html>
