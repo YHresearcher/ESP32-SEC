@@ -19,7 +19,7 @@ typedef enum { PAGE_HOME, PAGE_WIFI, PAGE_BLE, PAGE_DEFENSE,
                PAGE_ANALYTICS, PAGE_DIAG, PAGE_SETTINGS } page_t;
 static lang_t lang = LANG_VI;
 static page_t page = PAGE_HOME;
-static lv_obj_t *root, *heading, *body, *back_btn, *start_btn, *lang_btn, *tiles[6];
+static lv_obj_t *root, *heading, *panel, *body, *back_btn, *start_btn, *lang_btn, *tiles[6];
 static volatile bool scan_busy = false, scan_ready = false;
 static volatile bool ble_busy = false, ble_ready = false;
 static esp_err_t ble_result = ESP_OK;
@@ -46,6 +46,47 @@ static void persist_language(void) {
     nvs_set_u8(h, "lang", (uint8_t)lang);
     nvs_commit(h);
     nvs_close(h);
+}
+static void render_analytics(void) {
+    if (!scan_ready || scan_result != ESP_OK) {
+        lv_label_set_text(body, lang == LANG_VI ? "Quet Wi-Fi truoc de co du lieu." : "Run a Wi-Fi scan first.");
+        return;
+    }
+    int channel_counts[15]={0}, strongest[15]={0};
+    for (uint16_t i=0;i<ap_count;i++) {
+        unsigned ch=results[i].channel;
+        if(ch<1 || ch>14) continue;
+        channel_counts[ch]++;
+        if(strongest[ch]==0 || results[i].rssi>strongest[ch]) strongest[ch]=results[i].rssi;
+    }
+    size_t used=(size_t)snprintf(report,sizeof(report),"2.4 GHz channels\\n%u APs\\n\\n",ap_count);
+    for(int ch=1;ch<=14 && used<sizeof(report)-70;ch++){
+        int n=snprintf(report+used,sizeof(report)-used,
+            "CH%02d  %2d APs  %4d dBm\\n",ch,channel_counts[ch],strongest[ch]);
+        if(n<=0 || (size_t)n>=sizeof(report)-used)break;
+        used+=(size_t)n;
+    }
+    lv_label_set_text(body,report);
+}
+static void render_defense(void) {
+    if (!scan_ready || scan_result!=ESP_OK) {
+        lv_label_set_text(body,lang == LANG_VI ? "Quet Wi-Fi truoc de danh gia." : "Run Wi-Fi scan before assessment.");
+        return;
+    }
+    unsigned open=0, repeated=0;
+    for(uint16_t i=0;i<ap_count;i++){
+        if(results[i].authmode==0)open++;
+        for(uint16_t j=0;j<i;j++){
+            if(results[i].ssid[0] && strcmp(results[i].ssid,results[j].ssid)==0 &&
+               strcmp(results[i].bssid,results[j].bssid)!=0) {repeated++;break;}
+        }
+    }
+    snprintf(report,sizeof(report),
+        "%u access points\\n%u open networks observed\\n%u repeated SSIDs\\n\\n"
+        "Notes:\\nOpen network = no Wi-Fi encryption.\\n"
+        "Repeated SSID is common in mesh\\nand enterprise networks; it\\nis NOT proof of an attack.\\n"
+        "Assess only authorized networks.",ap_count,open,repeated);
+    lv_label_set_text(body,report);
 }
 static void refresh(void);
 static void back_cb(lv_event_t *e) { (void)e; page = PAGE_HOME; refresh(); }
@@ -138,10 +179,10 @@ static void refresh(void) {
         lv_label_set_text(lv_obj_get_child(tiles[i],0), menus[lang][i]);
     }
     if (home) {
-        lv_obj_add_flag(body, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(panel, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(back_btn, LV_OBJ_FLAG_HIDDEN);
     } else {
-        lv_obj_remove_flag(body, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(panel, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(back_btn, LV_OBJ_FLAG_HIDDEN);
     }
     if (page == PAGE_WIFI || page == PAGE_BLE) lv_obj_remove_flag(start_btn, LV_OBJ_FLAG_HIDDEN);
