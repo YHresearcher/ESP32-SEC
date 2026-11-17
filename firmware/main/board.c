@@ -75,14 +75,17 @@ esp_err_t sec_board_init(lv_display_t **out_display) {
         .double_buffer = true,
         .hres = SEC_LCD_WIDTH, .vres = SEC_LCD_HEIGHT,
         .monochrome = false,
+        // ST7789 SPI expects RGB565 high byte first. LVGL's native
+        // in-memory little-endian RGB565 needs byte swapping on flush.
+        .color_format = LV_COLOR_FORMAT_RGB565,
         .rotation = { .swap_xy = false, .mirror_x = false, .mirror_y = false },
-        .flags = { .buff_dma = true, .buff_spiram = false },
+        .flags = { .buff_dma = true, .buff_spiram = false, .swap_bytes = true },
     };
     ESP_LOGI(TAG, "SEC_LCD_STAGE_13: LVGL display begin");
     lv_display_t *display = lvgl_port_add_disp(&disp_cfg);
     if (!display) return ESP_FAIL;
     *out_display = display;
-    ESP_LOGI(TAG, "SEC_LCD_STAGE_14: LVGL display ready");
+    ESP_LOGI(TAG, "SEC_LCD_STAGE_14: LVGL display ready; RGB565 swap_bytes=1 RGB order (no inversion)");
 
     const gpio_config_t irq_cfg = {
         .pin_bit_mask = (1ULL << SEC_TOUCH_IRQ),
