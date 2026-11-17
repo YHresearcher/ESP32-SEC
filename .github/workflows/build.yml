@@ -43,6 +43,8 @@ jobs:
           cp firmware/build/bootloader/bootloader.bin "dist/${PREFIX}_bootloader.bin"
           cp firmware/build/partition_table/partition-table.bin "dist/${PREFIX}_partitions.bin"
           cp firmware/build/flasher_args.json "dist/${PREFIX}_flasher_args.json"
+          cp firmware/build/esp32_sec.elf "dist/${PREFIX}_symbols.elf"
+          if test -s firmware/build/esp32_sec.map; then cp firmware/build/esp32_sec.map "dist/${PREFIX}_symbols.map"; fi
           (cd dist && sha256sum *.bin > SHA256SUMS.txt)
       - uses: actions/upload-artifact@v4
         if: success()
