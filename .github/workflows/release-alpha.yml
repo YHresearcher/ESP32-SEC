@@ -80,6 +80,40 @@ jobs:
           Path('web/manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2))
           print('Verified manifest parts:',parts)
           PY
+          # ESP Web Tools + ESP-IDF v4+ require one merged firmware image.
+          # Do not pass separate bootloader/partition/app files to the browser flasher.
+          python3 -m pip install --quiet --user "esptool>=4.9,<6"
+          python3 - <<'PYMERGE'
+          import json, subprocess, sys
+          from pathlib import Path
+          src=json.loads(Path("firmware/build/flasher_args.json").read_text())
+          entries=src.get("flash_files")
+          if not isinstance(entries,dict) or len(entries)<3:
+              raise SystemExit("Missing ESP-IDF flash_files mapping")
+          prefix=next(Path("release").glob("*_firmware.bin")).name.removesuffix("_firmware.bin")
+          merged=f"firmware/{prefix}_merged.bin"
+          args=[sys.executable,"-m","esptool","--chip","esp32s3","merge_bin",
+                "-o",f"web/{merged}","--flash_mode","dio","--flash_freq","80m","--flash_size","16MB"]
+          for offset, path in sorted(entries.items(), key=lambda v:int(v[0],0)):
+              file=Path("firmware/build")/path
+              if not file.exists():
+                  raise SystemExit(f"Missing image: {file}")
+              args.extend([hex(int(offset,0)),str(file)])
+          print("Merging ESP-IDF binaries for ESP Web Tools")
+          subprocess.run(args,check=True)
+          if Path("web",merged).stat().st_size<100000:
+              raise SystemExit("Merged firmware unexpectedly small")
+          # The full merged binary starts at offset zero.
+          manifest={
+            "name":"ESP32-SEC ESP32-S3 N16R8 Experimental",
+            "version":prefix,
+            "new_install_prompt_erase":True,
+            "new_install_improv_wait_time":0,
+            "builds":[{"chipFamily":"ESP32-S3","parts":[{"path":merged,"offset":0}]}]
+          }
+          Path("web/manifest.json").write_text(json.dumps(manifest,indent=2,ensure_ascii=False))
+          Path("release",f"{prefix}_merged.bin").write_bytes(Path("web",merged).read_bytes())
+          PYMERGE
           (cd release && sha256sum *.bin > SHA256SUMS.txt)
 
       - name: Publish GitHub prerelease with timestamped assets (optional)
