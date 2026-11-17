@@ -1,0 +1,14 @@
+{
+  "name": "ESP32-SEC — EXAMPLE, NOT FOR FLASHING",
+  "version": "0.0.0",
+  "chipFamily": "ESP32-S3",
+  "builds": [
+    {
+      "parts": [
+        {"path":"REPLACE_WITH_VERIFIED_BOOTLOADER_URL","offset":0},
+        {"path":"REPLACE_WITH_VERIFIED_PARTITION_TABLE_URL","offset":32768},
+        {"path":"REPLACE_WITH_VERIFIED_APPLICATION_URL","offset":65536}
+      ]
+    }
+  ]
+}
