@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/release-alpha.yml"
+      - "firmware/**"
   workflow_dispatch:
 
 permissions:
@@ -38,7 +39,7 @@ jobs:
           STAMP="$(TZ=Asia/Ho_Chi_Minh date +'%d-%m-%Y_%H-%M')"
           TAGSTAMP="$(TZ=Asia/Ho_Chi_Minh date +'%Y%m%d-%H%M')"
           PREFIX="ESP32-SEC_v0.1.1-alpha_${STAMP}"
-          echo "RELEASE_TAG=v0.1.1-alpha-${TAGSTAMP}" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=v0.1.1-alpha-${TAGSTAMP}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
           echo "BUILD_PREFIX=$PREFIX" >> "$GITHUB_ENV"
           mkdir -p release web/firmware
 
