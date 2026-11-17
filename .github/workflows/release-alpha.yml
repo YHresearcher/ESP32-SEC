@@ -82,7 +82,8 @@ jobs:
           PY
           # ESP Web Tools + ESP-IDF v4+ require one merged firmware image.
           # Do not pass separate bootloader/partition/app files to the browser flasher.
-          python3 -m pip install --quiet --user "esptool>=4.9,<6"
+          python3 -m venv /tmp/sec-esptool
+          /tmp/sec-esptool/bin/python -m pip install --quiet "esptool>=4.9,<6"
           python3 - <<'PYMERGE'
           import json, subprocess, sys
           from pathlib import Path
@@ -92,7 +93,7 @@ jobs:
               raise SystemExit("Missing ESP-IDF flash_files mapping")
           prefix=next(Path("release").glob("*_firmware.bin")).name.removesuffix("_firmware.bin")
           merged=f"firmware/{prefix}_merged.bin"
-          args=[sys.executable,"-m","esptool","--chip","esp32s3","merge_bin",
+          args=["/tmp/sec-esptool/bin/python","-m","esptool","--chip","esp32s3","merge_bin",
                 "-o",f"web/{merged}","--flash_mode","dio","--flash_freq","80m","--flash_size","16MB"]
           for offset, path in sorted(entries.items(), key=lambda v:int(v[0],0)):
               file=Path("firmware/build")/path
