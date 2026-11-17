@@ -47,3 +47,5 @@ esp_err_t sec_wifi_scan(sec_wifi_ap_t *out, uint16_t *count) {
     *count = found;
     return ESP_OK;
 }
+
+esp_err_t sec_wifi_cancel(void) { return esp_wifi_scan_stop(); }
