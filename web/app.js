@@ -1,6 +1,7 @@
 const localeButton = document.getElementById("locale");
 const version = document.getElementById("version");
 const firmwareFile = document.getElementById("firmware-file");
+const buildTime = document.getElementById("build-time");
 const firmwareDownload = document.getElementById("firmware-download");
 const installer = document.getElementById("installer");
 const status = document.getElementById("status");
@@ -20,8 +21,12 @@ function render() {
   document.querySelectorAll("[data-vi][data-en]").forEach(node => {
     node.textContent = node.dataset[language];
   });
-  version.textContent = firmwareVersion ? strings[language].build + ": " + firmwareVersion : "ESP32-SEC · Alpha";
+  const buildMatch = firmwareVersion.match(/_v([^_]+)_(\d{2}-\d{2}-\d{4})_(\d{2}-\d{2})$/);
+  version.textContent = buildMatch ? "ESP32-SEC v" + buildMatch[1] : (firmwareVersion || "ESP32-SEC · Alpha");
+  buildTime.textContent = buildMatch ? (language === "vi" ? "Ngày build: " : "Built: ") + buildMatch[2] + " " + buildMatch[3].replace("-", ":") + " (VN)" : "";
   firmwareFile.textContent = selectedFirmware || (language === "vi" ? "Chưa chọn firmware" : "No firmware selected");
+  firmwareFile.title = selectedFirmware;
+  firmwareFile.setAttribute("aria-label", selectedFirmware ? "Firmware: " + selectedFirmware : "Firmware unavailable");
   firmwareDownload.hidden = !available || !selectedFirmware;
   status.textContent = available ? strings[language].ready : strings[language].missing;
   installer.hidden = !available;
