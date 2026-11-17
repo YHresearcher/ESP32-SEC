@@ -50,13 +50,7 @@
       <div id="firmware-file" class="firmware-file" title="" aria-label="Full firmware filename"></div>
       <a id="firmware-download" class="firmware-download" hidden download data-vi="Tải file firmware" data-en="Download firmware">Tải file firmware</a>
     </div>
-    <div id="installer" hidden>
-      <esp-web-install-button manifest="./manifest.json">
-        <button slot="activate" type="button" style="width:100%;background:#3ed6b7;border:0;border-radius:11px;padding:14px;color:#07251d;font-weight:750" data-vi="Kết nối & Nạp firmware" data-en="Connect & Flash firmware">Kết nối & Nạp firmware</button>
-        <span slot="unsupported" data-vi="Dùng Chrome hoặc Edge trên máy tính để nạp qua USB." data-en="Use desktop Chrome or Edge to flash over USB.">Dùng Chrome hoặc Edge trên máy tính để nạp qua USB.</span>
-        <span slot="not-allowed" data-vi="Trang cần HTTPS để truy cập USB." data-en="HTTPS is required for USB access.">Trang cần HTTPS để truy cập USB.</span>
-      </esp-web-install-button>
-    </div>
+    <div id="installer" hidden></div>
     <p id="status" aria-live="polite"></p>
   </section>
   <footer>
@@ -64,6 +58,6 @@
     <a href="https://github.com/YHresearcher/ESP32-SEC" target="_blank" rel="noopener">GitHub</a>
   </footer>
 </main>
-<script src="./app.js"></script>
+<script src="./app.js?v=manifest-sync-2"></script>
 </body>
 </html>
