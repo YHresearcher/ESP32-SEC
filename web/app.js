@@ -1,73 +1,50 @@
-let locale = localStorage.getItem("sec_lang") === "en" ? "en" : "vi";
 const localeButton = document.getElementById("locale");
-const status = document.getElementById("install-status");
-const log = document.getElementById("log");
-const connect = document.getElementById("connect");
-const disconnect = document.getElementById("disconnect");
-let port = null, reader = null, reading = false;
+const version = document.getElementById("version");
 const installer = document.getElementById("installer");
-const firmwareName = document.getElementById("firmware-name");
-let manifestAvailable = false;
-let publishedVersion = "";
-function updateFlasher() {
-  installer.hidden = !manifestAvailable;
-  firmwareName.textContent = publishedVersion ? (locale === "vi" ? "Bản build: " : "Build: ") + publishedVersion : "";
-  status.textContent = !manifestAvailable
-    ? (locale === "vi" ? "Firmware đang được xuất bản; kiểm tra Releases nếu chưa thấy nút Nạp." : "Firmware publishing pending; check Releases if Install is not visible.")
-    : (locale === "vi" ? "Nhấn CONNECT để nạp bản alpha lên ESP32-S3." : "Press CONNECT to flash the alpha onto ESP32-S3.");
-}
+const status = document.getElementById("status");
+let language = localStorage.getItem("esp32_sec_lang") === "en" ? "en" : "vi";
+let firmwareVersion = "";
+let available = false;
+
+const strings = {
+  vi: { build: "Bản build", missing: "Chưa có bản firmware để nạp.", ready: "Kết nối thiết bị ESP32-S3 qua USB và nhấn nút nạp." },
+  en: { build: "Build", missing: "No firmware available to flash.", ready: "Connect your ESP32-S3 over USB and press Flash." }
+};
+
 function render() {
-  document.documentElement.lang = locale;
-  localeButton.textContent = locale === "vi" ? "EN" : "VI";
-  document.querySelectorAll("[data-vi][data-en]").forEach(el => { el.textContent = el.dataset[locale]; });
-  updateFlasher();
+  document.documentElement.lang = language;
+  localeButton.textContent = language === "vi" ? "EN" : "VI";
+  document.querySelectorAll("[data-vi][data-en]").forEach(node => {
+    node.textContent = node.dataset[language];
+  });
+  version.textContent = firmwareVersion ? strings[language].build + ": " + firmwareVersion : "ESP32-SEC · Alpha";
+  status.textContent = available ? strings[language].ready : strings[language].missing;
+  installer.hidden = !available;
 }
+
 localeButton.addEventListener("click", () => {
-  locale = locale === "vi" ? "en" : "vi"; localStorage.setItem("sec_lang", locale); render();
+  language = language === "vi" ? "en" : "vi";
+  localStorage.setItem("esp32_sec_lang", language);
+  render();
 });
-// Firmware binaries and the chip-specific manifest are published to this same HTTPS origin.
-(async () => {
+
+async function loadManifest() {
   try {
-    const r = await fetch("./manifest.json", {cache:"no-store"});
-    if (!r.ok) return;
-    const m = await r.json();
-    const valid = Array.isArray(m?.builds) && m.builds.some(b =>
-      b.chipFamily === "ESP32-S3" &&
-      Array.isArray(b.parts) && b.parts.length === 3 &&
-      b.parts.every(p => typeof p.path === "string" && p.path.startsWith("firmware/") &&
-        Number.isInteger(p.offset) && p.offset >= 0));
-    if (!valid) throw new Error("Manifest invalid for ESP32-S3");
-    manifestAvailable = true;
-    publishedVersion = String(m.version || "");
-  } catch (e) {
-    log.value += "Firmware manifest: " + String(e) + "\\n";
+    const response = await fetch("./manifest.json", {cache: "no-store"});
+    if (!response.ok) throw new Error("Manifest missing");
+    const manifest = await response.json();
+    available = Array.isArray(manifest.builds) && manifest.builds.some(build =>
+      build.chipFamily === "ESP32-S3" &&
+      Array.isArray(build.parts) && build.parts.length === 3 &&
+      build.parts.every(part => typeof part.path === "string" &&
+        part.path.startsWith("firmware/") && Number.isInteger(part.offset) && part.offset >= 0)
+    );
+    if (available) firmwareVersion = String(manifest.version || "");
+  } catch {
+    available = false;
   }
-  updateFlasher();
-})();
-connect.addEventListener("click", async () => {
-  if (!("serial" in navigator)) { log.value += "Web Serial unavailable. Use desktop Chrome or Edge.\n"; return; }
-  try {
-    port = await navigator.serial.requestPort();
-    await port.open({baudRate:115200});
-    connect.disabled = true; disconnect.disabled = false; reading = true;
-    while (port?.readable && reading) {
-      reader = port.readable.getReader();
-      try { while(reading) {
-        const {value,done} = await reader.read();
-        if(done) break;
-        log.value += new TextDecoder().decode(value);
-        if(log.value.length > 50000) log.value = log.value.slice(-40000);
-        log.scrollTop = log.scrollHeight;
-      }} finally { reader.releaseLock(); reader = null; }
-    }
-  } catch (e) { log.value += "Serial: " + String(e) + "\n"; }
-  finally {
-    reading = false; connect.disabled = false; disconnect.disabled = true;
-    if (port) { try {await port.close();}catch(_){} port = null; }
-  }
-});
-disconnect.addEventListener("click", async () => {
-  reading = false;
-  if (reader) { try {await reader.cancel();}catch(_){} }
-});
+  render();
+}
+
 render();
+loadManifest();
