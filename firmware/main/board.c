@@ -55,9 +55,14 @@ esp_err_t sec_board_init(lv_display_t **out_display) {
     ESP_RETURN_ON_ERROR(esp_lcd_panel_disp_on_off(panel, true), TAG, "display on");
     ESP_LOGI(TAG, "SEC_LCD_STAGE_09: submit white test stripe");
     for (size_t i=0; i<SEC_LCD_WIDTH*16; i++) s_lcd_probe[i]=0xFFFF;
-    ESP_RETURN_ON_ERROR(esp_lcd_panel_draw_bitmap(panel, 0, 0, SEC_LCD_WIDTH, 16, s_lcd_probe),
-                        TAG, "LCD probe");
-    vTaskDelay(pdMS_TO_TICKS(300));
+    // One immutable white buffer is reused for all strips; SPI DMA may finish
+    // after draw_bitmap returns, so we never modify its pixels.
+    for (int y = 0; y < SEC_LCD_HEIGHT; y += 16) {
+        ESP_RETURN_ON_ERROR(esp_lcd_panel_draw_bitmap(panel, 0, y, SEC_LCD_WIDTH, y + 16,
+                                                       s_lcd_probe), TAG, "LCD probe");
+    }
+    ESP_LOGI(TAG, "SEC_LCD_TEST_WHITE: white screen should be visible now");
+    vTaskDelay(pdMS_TO_TICKS(1500));
     ESP_LOGI(TAG, "SEC_LCD_STAGE_10: stripe submitted");
     const lvgl_port_cfg_t port_cfg = ESP_LVGL_PORT_INIT_CONFIG();
     ESP_LOGI(TAG, "SEC_LCD_STAGE_11: LVGL init begin");
