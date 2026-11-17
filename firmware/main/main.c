@@ -4,6 +4,7 @@
 #include "ble_scan.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
+#include "esp_system.h"
 #include "esp_psram.h"
 #include "nvs_flash.h"
 static const char *TAG = "ESP32_SEC";
