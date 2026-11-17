@@ -11,6 +11,10 @@ on:
       - ".github/workflows/build.yml"
   workflow_dispatch:
 
+concurrency:
+  group: esp32-sec-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
