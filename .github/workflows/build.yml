@@ -31,14 +31,23 @@ jobs:
         shell: bash
         run: |
           find firmware/build -maxdepth 2 -type f \( -name '*.bin' -o -name 'flasher_args.json' \) -print
+      - name: Package timestamped CI build
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAMP="$(TZ=Asia/Ho_Chi_Minh date +'%d-%m-%Y_%H-%M')"
+          PREFIX="ESP32-SEC_${STAMP}"
+          echo "ARTIFACT_NAME=${PREFIX}_CI-UNVERIFIED" >> "$GITHUB_ENV"
+          mkdir -p dist
+          cp firmware/build/esp32_sec.bin "dist/${PREFIX}_firmware.bin"
+          cp firmware/build/bootloader/bootloader.bin "dist/${PREFIX}_bootloader.bin"
+          cp firmware/build/partition_table/partition-table.bin "dist/${PREFIX}_partitions.bin"
+          cp firmware/build/flasher_args.json "dist/${PREFIX}_flasher_args.json"
+          (cd dist && sha256sum *.bin > SHA256SUMS.txt)
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: esp32-sec-unverified-ci
-          path: |
-            firmware/build/*.bin
-            firmware/build/bootloader/*.bin
-            firmware/build/partition_table/*.bin
-            firmware/build/flasher_args.json
+          name: ${{ env.ARTIFACT_NAME }}
+          path: dist/
           if-no-files-found: error
           retention-days: 7
