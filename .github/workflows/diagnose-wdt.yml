@@ -1,0 +1,43 @@
+name: Diagnose ESP32-SEC LCD watchdog backtrace (22-24 build)
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/diagnose-wdt.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  decode-original-backtrace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Firmware displayed as 17-11-2026 22:24 was built before LCD
+          # diagnostic commits; reproduce this revision for approximate
+          # symbol resolution. Prefer exact ELF from running device if available.
+          ref: 0dd9aa23ca9f21557173adbf9914d8ef8da3d3a9
+      - name: Rebuild and symbolize reported CPU 0 watchdog
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v6.0.1
+          target: esp32s3
+          path: firmware
+          command: >-
+            idf.py build &&
+            echo SEC_WDT_BACKTRACE_SYMBOLS_BEGIN &&
+            xtensa-esp32s3-elf-addr2line -pfiaC -e build/esp32_sec.elf
+            0x4207A90E 0x4207AD34 0x4037D481 0x42039222
+            0x42010B22 0x42010FA7 0x4201029C 0x420081D9 0x420F61B6 &&
+            echo SEC_WDT_BACKTRACE_SYMBOLS_END
+      - name: Upload debug symbols
+        uses: actions/upload-artifact@v4
+        with:
+          name: ESP32-SEC_17-11-2026_22-24_WDT-symbols
+          path: |
+            firmware/build/*.elf
+            firmware/build/*.map
+          retention-days: 14
