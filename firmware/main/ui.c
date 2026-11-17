@@ -1,5 +1,6 @@
 #include "ui.h"
 #include "wifi_scan.h"
+#include "ble_scan.h"
 #include "esp_lvgl_port.h"
 #include "esp_log.h"
 #include "nvs.h"
@@ -20,6 +21,10 @@ static lang_t lang = LANG_VI;
 static page_t page = PAGE_HOME;
 static lv_obj_t *root, *heading, *body, *back_btn, *start_btn, *lang_btn, *tiles[6];
 static volatile bool scan_busy = false, scan_ready = false;
+static volatile bool ble_busy = false, ble_ready = false;
+static esp_err_t ble_result = ESP_OK;
+static uint16_t ble_count = 0;
+static sec_ble_device_t ble_results[SEC_MAX_BLE];
 static esp_err_t scan_result = ESP_OK;
 static uint16_t ap_count = 0;
 static sec_wifi_ap_t results[SEC_MAX_APS];
@@ -61,9 +66,37 @@ static void wifi_worker(void *unused) {
     scan_busy = false;
     vTaskDelete(NULL);
 }
+static void ble_worker(void *unused) {
+    (void)unused;
+    uint16_t count = 0;
+    ble_result = sec_ble_scan(ble_results, &count);
+    ble_count = count; ble_ready = true; ble_busy = false;
+    vTaskDelete(NULL);
+}
+static void render_ble(void) {
+    if (ble_busy) { lv_label_set_text(body, "Scanning BLE advertisements..."); return; }
+    if (!ble_ready) { lv_label_set_text(body, "Tap Scan to discover BLE devices."); return; }
+    if (ble_result != ESP_OK) {
+        lv_label_set_text(body, "BLE scan error / not ready."); return;
+    }
+    size_t used = (size_t)snprintf(report,sizeof(report), "%u BLE devices\\n\\n",ble_count);
+    for (uint16_t i=0; i<ble_count && i<12 && used < sizeof(report)-90; i++) {
+        int n = snprintf(report+used,sizeof(report)-used,"%s\\n%d dBm  %s\\n",
+            ble_results[i].name, ble_results[i].rssi, ble_results[i].address);
+        if(n<=0 || (size_t)n>=sizeof(report)-used) break;
+        used+=(size_t)n;
+    }
+    lv_label_set_text(body,report);
+}
 static void start_cb(lv_event_t *e) {
     (void)e;
-    if (page != PAGE_WIFI || scan_busy) return;
+    if ((page != PAGE_WIFI && page != PAGE_BLE) || scan_busy || ble_busy) return;
+    if (page == PAGE_BLE) {
+        ble_ready=false; ble_busy=true;
+        if (xTaskCreate(ble_worker,"ble_scan",6144,NULL,4,NULL)!=pdPASS) { ble_busy=false; lv_label_set_text(body,"BLE task start failed"); }
+        else lv_label_set_text(body, "Scanning BLE...");
+        return;
+    }
     scan_ready = false;
     scan_busy = true;
     if (xTaskCreate(wifi_worker, "wifi_scan", 6144, NULL, 4, NULL) != pdPASS) {
@@ -111,7 +144,7 @@ static void refresh(void) {
         lv_obj_remove_flag(body, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(back_btn, LV_OBJ_FLAG_HIDDEN);
     }
-    if (page == PAGE_WIFI) lv_obj_remove_flag(start_btn, LV_OBJ_FLAG_HIDDEN);
+    if (page == PAGE_WIFI || page == PAGE_BLE) lv_obj_remove_flag(start_btn, LV_OBJ_FLAG_HIDDEN);
     else lv_obj_add_flag(start_btn, LV_OBJ_FLAG_HIDDEN);
     if (page == PAGE_SETTINGS) lv_obj_remove_flag(lang_btn, LV_OBJ_FLAG_HIDDEN);
     else lv_obj_add_flag(lang_btn, LV_OBJ_FLAG_HIDDEN);
@@ -139,6 +172,7 @@ static void refresh(void) {
 static void ui_timer(lv_timer_t *timer) {
     (void)timer;
     if (scan_ready && page == PAGE_WIFI && !scan_busy) render_wifi();
+    if (ble_ready && page == PAGE_BLE && !ble_busy) render_ble();
 }
 void sec_ui_init(void) {
     nvs_handle_t h;
