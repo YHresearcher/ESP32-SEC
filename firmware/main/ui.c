@@ -131,6 +131,8 @@ static void render_ble(void) {
 }
 static void start_cb(lv_event_t *e) {
     (void)e;
+    if (page == PAGE_WIFI && scan_busy) { sec_wifi_cancel(); lv_label_set_text(body,"Stopping Wi-Fi scan..."); return; }
+    if (page == PAGE_BLE && ble_busy) { sec_ble_cancel(); lv_label_set_text(body,"Stopping BLE scan..."); return; }
     if ((page != PAGE_WIFI && page != PAGE_BLE) || scan_busy || ble_busy) return;
     if (page == PAGE_BLE) {
         ble_ready=false; ble_busy=true;
@@ -190,6 +192,7 @@ static void refresh(void) {
     if (page == PAGE_SETTINGS) lv_obj_remove_flag(lang_btn, LV_OBJ_FLAG_HIDDEN);
     else lv_obj_add_flag(lang_btn, LV_OBJ_FLAG_HIDDEN);
     lv_label_set_text(lv_obj_get_child(lang_btn,0), lang == LANG_VI ? "EN" : "VI");
+    lv_label_set_text(lv_obj_get_child(start_btn,0), ((page==PAGE_WIFI && scan_busy) || (page==PAGE_BLE && ble_busy)) ? "Stop" : "Scan");
     if (page == PAGE_WIFI) render_wifi();
     if (page == PAGE_BLE) lv_label_set_text(body, lang == LANG_VI ?
         "BLE Explorer: chua tich hop.\nChua co quet BLE." :
@@ -212,8 +215,11 @@ static void refresh(void) {
 }
 static void ui_timer(lv_timer_t *timer) {
     (void)timer;
-    if (scan_ready && page == PAGE_WIFI && !scan_busy) render_wifi();
-    if (ble_ready && page == PAGE_BLE && !ble_busy) render_ble();
+    static bool prev_wifi_busy = false, prev_ble_busy = false;
+    if (prev_wifi_busy != scan_busy || prev_ble_busy != ble_busy) {
+        prev_wifi_busy = scan_busy; prev_ble_busy = ble_busy;
+        if (page == PAGE_WIFI || page == PAGE_BLE) refresh();
+    }
 }
 void sec_ui_init(void) {
     nvs_handle_t h;
