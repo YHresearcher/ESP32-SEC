@@ -3,6 +3,7 @@
 #include "ble_scan.h"
 #include "feature_registry.h"
 #include "security_audit.h"
+#include "lab_link.h"
 #include "esp_lvgl_port.h"
 #include "esp_log.h"
 #include "nvs.h"
@@ -19,10 +20,10 @@ LV_FONT_DECLARE(sec_font_vi_13);
 
 typedef enum { LANG_VI, LANG_EN } lang_t;
 typedef enum { PAGE_HOME, PAGE_WIFI, PAGE_BLE, PAGE_DEFENSE,
-               PAGE_ANALYTICS, PAGE_DIAG, PAGE_SETTINGS, PAGE_LAB, PAGE_MODULES } page_t;
+               PAGE_ANALYTICS, PAGE_DIAG, PAGE_SETTINGS, PAGE_LAB, PAGE_MODULES, PAGE_CONTROL } page_t;
 static lang_t lang = LANG_VI;
 static page_t page = PAGE_HOME;
-static lv_obj_t *root, *heading, *content_panel, *body, *back_btn, *start_btn, *lang_btn, *tiles[8];
+static lv_obj_t *root, *heading, *content_panel, *body, *back_btn, *start_btn, *lang_btn, *tiles[9];
 static volatile bool scan_busy = false, scan_ready = false;
 static volatile bool ble_busy = false, ble_ready = false;
 static esp_err_t ble_result = ESP_OK;
@@ -33,13 +34,13 @@ static uint16_t ap_count = 0;
 static sec_wifi_ap_t results[SEC_MAX_APS];
 static char report[1500];
 static char diag[480];
-static const char *menus[2][8] = {
-    {"Wi-Fi", "Bluetooth BLE", "Phòng vệ", "Phân tích", "Chẩn đoán", "Cài đặt", "Pentest Lab", "Mô-đun"},
-    {"Wi-Fi", "Bluetooth BLE", "Defense", "Analytics", "Diagnostics", "Settings", "Pentest Lab", "Modules"},
+static const char *menus[2][9] = {
+    {"Wi-Fi", "Bluetooth BLE", "Phòng vệ", "Phân tích", "Chẩn đoán", "Cài đặt", "Pentest Lab", "Mô-đun", "Điều khiển"},
+    {"Wi-Fi", "Bluetooth BLE", "Defense", "Analytics", "Diagnostics", "Settings", "Pentest Lab", "Modules", "Lab Control"},
 };
-static const char *page_names[2][9] = {
+static const char *page_names[2][10] = {
     {"ESP32-SEC", "Wi-Fi Audit", "Bluetooth BLE", "Phòng vệ", "Phân tích", "Chẩn đoán", "Cài đặt", "Pentest Lab", "Mô-đun"},
-    {"ESP32-SEC", "Wi-Fi Audit", "Bluetooth BLE", "Defense", "Analytics", "Diagnostics", "Settings", "Pentest Lab", "Modules"},
+    {"ESP32-SEC", "Wi-Fi Audit", "Bluetooth BLE", "Defense", "Analytics", "Diagnostics", "Settings", "Pentest Lab", "Modules", "Lab Control"},
 };
 static void persist_language(void) {
     nvs_handle_t h;
@@ -94,7 +95,13 @@ static void render_modules(void) {
 static void refresh(void);
 static void back_cb(lv_event_t *e) { (void)e; page = PAGE_HOME; refresh(); }
 static void lang_cb(lv_event_t *e) {
-    (void)e; lang = lang == LANG_VI ? LANG_EN : LANG_VI;
+    (void)e;
+    if (page == PAGE_CONTROL) {
+        bool queued = sec_lab_request(SEC_LAB_LED_OFF);
+        lv_label_set_text(body, queued ? (lang == LANG_VI ? "Đã gửi yêu cầu LED OFF.\nKiểm tra phản hồi trên PC.\nChưa xác nhận đích đã thực hiện." : "LED OFF request sent.\nCheck PC agent for confirmation.") : "Console unavailable.");
+        return;
+    }
+    lang = lang == LANG_VI ? LANG_EN : LANG_VI;
     persist_language(); refresh();
 }
 static void tile_cb(lv_event_t *e) {
@@ -150,6 +157,11 @@ static void render_ble(void) {
 }
 static void start_cb(lv_event_t *e) {
     (void)e;
+    if (page == PAGE_CONTROL) {
+        bool queued = sec_lab_request(SEC_LAB_LED_ON);
+        lv_label_set_text(body, queued ? (lang == LANG_VI ? "Đã gửi yêu cầu LED ON.\nKiểm tra phản hồi trên PC.\nChưa xác nhận đích đã thực hiện." : "LED ON request sent.\nCheck PC agent for confirmation.") : "Console unavailable.");
+        return;
+    }
     if (page == PAGE_WIFI && scan_busy) { sec_wifi_cancel(); lv_label_set_text(body,"Stopping Wi-Fi scan..."); return; }
     if (page == PAGE_BLE && ble_busy) { sec_ble_cancel(); lv_label_set_text(body,"Stopping BLE scan..."); return; }
     if ((page != PAGE_WIFI && page != PAGE_BLE) || scan_busy || ble_busy) return;
@@ -194,7 +206,7 @@ static void render_wifi(void) {
 static void refresh(void) {
     lv_label_set_text(heading, page_names[lang][page]);
     bool home = page == PAGE_HOME;
-    for (int i=0;i<8;i++) {
+    for (int i=0;i<9;i++) {
         if (home) lv_obj_remove_flag(tiles[i], LV_OBJ_FLAG_HIDDEN);
         else lv_obj_add_flag(tiles[i], LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(lv_obj_get_child(tiles[i],0), menus[lang][i]);
@@ -206,18 +218,21 @@ static void refresh(void) {
         lv_obj_remove_flag(content_panel, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(back_btn, LV_OBJ_FLAG_HIDDEN);
     }
-    if (page == PAGE_WIFI || page == PAGE_BLE) lv_obj_remove_flag(start_btn, LV_OBJ_FLAG_HIDDEN);
+    if (page == PAGE_WIFI || page == PAGE_BLE || page == PAGE_CONTROL) lv_obj_remove_flag(start_btn, LV_OBJ_FLAG_HIDDEN);
     else lv_obj_add_flag(start_btn, LV_OBJ_FLAG_HIDDEN);
-    if (page == PAGE_SETTINGS) lv_obj_remove_flag(lang_btn, LV_OBJ_FLAG_HIDDEN);
+    if (page == PAGE_SETTINGS || page == PAGE_CONTROL) lv_obj_remove_flag(lang_btn, LV_OBJ_FLAG_HIDDEN);
     else lv_obj_add_flag(lang_btn, LV_OBJ_FLAG_HIDDEN);
-    lv_label_set_text(lv_obj_get_child(lang_btn,0), lang == LANG_VI ? "EN" : "VI");
-    lv_label_set_text(lv_obj_get_child(start_btn,0), ((page==PAGE_WIFI && scan_busy) || (page==PAGE_BLE && ble_busy)) ? (lang == LANG_VI ? "Dừng" : "Stop") : (lang == LANG_VI ? "Quét" : "Scan"));
+    lv_label_set_text(lv_obj_get_child(lang_btn,0), page == PAGE_CONTROL ? "LED OFF" : (lang == LANG_VI ? "EN" : "VI"));
+    lv_label_set_text(lv_obj_get_child(start_btn,0), page == PAGE_CONTROL ? "LED ON" : (((page==PAGE_WIFI && scan_busy) || (page==PAGE_BLE && ble_busy)) ? (lang == LANG_VI ? "Dừng" : "Stop") : (lang == LANG_VI ? "Quét" : "Scan")));
     if (page == PAGE_WIFI) render_wifi();
     if (page == PAGE_BLE) render_ble();
     if (page == PAGE_DEFENSE) render_defense();
     if (page == PAGE_ANALYTICS) render_analytics();
     if (page == PAGE_LAB) render_lab();
     if (page == PAGE_MODULES) render_modules();
+    if (page == PAGE_CONTROL) lv_label_set_text(body, lang == LANG_VI ?
+        "LAB CONTROLLER\n\nKết nối ESP32-SEC qua USB\nvới PC chạy lab_controller.py\n\nChỉ 2 hành động cho phép:\nLED ON / LED OFF.\n\nPhải bật --enable-control\ntrên PC trước khi thử.\nKhông có remote shell.\n\nMọi yêu cầu chỉ gửi đi,\nchưa xác nhận thực hiện." :
+        "LAB CONTROLLER\n\nConnect ESP32-SEC over USB\nto lab_controller.py on PC.\n\nFixed LED ON/OFF actions only.\nHost requires --enable-control.\nNo remote shell.\nRequests are not acknowledgments.");
     if (page == PAGE_DIAG) {
         size_t feature_total = 0;
         sec_feature_catalog(&feature_total);
@@ -257,8 +272,8 @@ void sec_ui_init(void) {
     lv_obj_align(heading, LV_ALIGN_TOP_MID, 0, 9);
     for (int i=0;i<8;i++) {
         tiles[i] = lv_button_create(root);
-        lv_obj_set_size(tiles[i], 106, 54);
-        lv_obj_set_pos(tiles[i], 10+(i%2)*114, 42+(i/2)*62);
+        lv_obj_set_size(tiles[i], 106, 48);
+        lv_obj_set_pos(tiles[i], 10+(i%2)*114, 40+(i/2)*54);
         lv_obj_set_style_bg_color(tiles[i], lv_color_hex(0x14364C), 0);
         lv_obj_set_style_border_width(tiles[i], 1, 0);
         lv_obj_set_style_border_color(tiles[i], lv_color_hex(0x21A9B1), 0);
