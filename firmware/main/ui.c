@@ -39,7 +39,7 @@ static const char *menus[2][9] = {
     {"Wi-Fi", "Bluetooth BLE", "Defense", "Analytics", "Diagnostics", "Settings", "Pentest Lab", "Modules", "Lab Control"},
 };
 static const char *page_names[2][10] = {
-    {"ESP32-SEC", "Wi-Fi Audit", "Bluetooth BLE", "Phòng vệ", "Phân tích", "Chẩn đoán", "Cài đặt", "Pentest Lab", "Mô-đun"},
+    {"ESP32-SEC", "Wi-Fi Audit", "Bluetooth BLE", "Phòng vệ", "Phân tích", "Chẩn đoán", "Cài đặt", "Pentest Lab", "Mô-đun", "Lab Control"},
     {"ESP32-SEC", "Wi-Fi Audit", "Bluetooth BLE", "Defense", "Analytics", "Diagnostics", "Settings", "Pentest Lab", "Modules", "Lab Control"},
 };
 static void persist_language(void) {
