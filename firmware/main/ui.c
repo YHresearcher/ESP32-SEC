@@ -207,9 +207,10 @@ static void refresh(void) {
     lv_label_set_text(heading, page_names[lang][page]);
     bool home = page == PAGE_HOME;
     for (int i=0;i<9;i++) {
+        if (!tiles[i]) continue;
         if (home) lv_obj_remove_flag(tiles[i], LV_OBJ_FLAG_HIDDEN);
         else lv_obj_add_flag(tiles[i], LV_OBJ_FLAG_HIDDEN);
-        lv_label_set_text(lv_obj_get_child(tiles[i],0), menus[lang][i]);
+        if (tiles[i]) lv_label_set_text(lv_obj_get_child(tiles[i],0), menus[lang][i]);
     }
     if (home) {
         lv_obj_add_flag(content_panel, LV_OBJ_FLAG_HIDDEN);
@@ -270,8 +271,9 @@ void sec_ui_init(void) {
     lv_obj_set_style_text_font(heading, &sec_font_vi_13, 0);
     lv_obj_set_style_text_color(heading, lv_color_hex(0x4BE1D9), 0);
     lv_obj_align(heading, LV_ALIGN_TOP_MID, 0, 9);
-    for (int i=0;i<8;i++) {
+    for (int i=0;i<9;i++) {
         tiles[i] = lv_button_create(root);
+        if (!tiles[i]) { ESP_LOGE("SEC_UI", "Tile %d allocation failed", i); continue; }
         lv_obj_set_size(tiles[i], 106, 48);
         lv_obj_set_pos(tiles[i], 10+(i%2)*114, 40+(i/2)*54);
         lv_obj_set_style_bg_color(tiles[i], lv_color_hex(0x14364C), 0);
