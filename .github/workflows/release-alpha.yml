@@ -47,8 +47,8 @@ jobs:
           set -euo pipefail
           STAMP="$(TZ=Asia/Ho_Chi_Minh date +'%d-%m-%Y_%H-%M')"
           TAGSTAMP="$(TZ=Asia/Ho_Chi_Minh date +'%Y%m%d-%H%M')"
-          PREFIX="ESP32-SEC_v0.2.1-alpha_${STAMP}"
-          echo "RELEASE_TAG=v0.2.1-alpha-${TAGSTAMP}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          PREFIX="ESP32-SEC_v0.2.2-alpha_${STAMP}"
+          echo "RELEASE_TAG=v0.2.2-alpha-${TAGSTAMP}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
           echo "BUILD_PREFIX=$PREFIX" >> "$GITHUB_ENV"
           mkdir -p release web/firmware
 
@@ -147,12 +147,12 @@ jobs:
         run: |
           set -euo pipefail
           cat > release-notes.md <<'NOTES'
-          # ESP32-SEC v0.2.1 alpha — RECOVERY PRE-RC (HARDWARE UNVERIFIED)
+          # ESP32-SEC v0.2.2 alpha — CONTRAST AND AUDIT PRE-RC (HARDWARE UNVERIFIED)
           Hardware: ESP32-S3 N16R8, ST7789V 240x320, XPT2046 (existing Chibi wiring).
           The firmware compiled in CI but has NOT passed a physical-device smoke test.
           The public web flasher offers direct installation after the standard browser USB permission dialog.
           Choose the correct USB device. This is an experimental build and may not boot correctly.
-          Includes LCD recovery mode after repeated incomplete boots, passive Wi-Fi/BLE audit, parser self-test and nine-tile UI.
+          Includes explicit white-on-dark UI, nine non-overlapping menu tiles, Wi-Fi configuration risk summary, BLE signal bands, and LCD recovery.
           Unverified on real hardware: LCD, touch, radio coexistence, lab control, boot recovery. No disruptive radio tools.
           Flash offsets are generated from ESP-IDF flasher_args.json, not hand-entered.
           NOTES
@@ -163,7 +163,7 @@ jobs:
           gh release create "$RELEASE_TAG" release/*.bin release/*_flasher_args.json release/SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "ESP32-SEC v0.2.1-alpha · ${BUILD_PREFIX}" \
+            --title "ESP32-SEC v0.2.2-alpha · ${BUILD_PREFIX}" \
             --notes-file release-notes.md --prerelease
 
       # A GitHub Release may be blocked by repo Actions token permissions; website deploy is independent.
