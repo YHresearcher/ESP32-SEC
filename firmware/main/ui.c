@@ -3,6 +3,7 @@
 #include "ble_scan.h"
 #include "feature_registry.h"
 #include "security_audit.h"
+#include "sec_report.h"
 #include "lab_link.h"
 #include "boot_guard.h"
 #include "esp_lvgl_port.h"
@@ -124,6 +125,27 @@ static void refresh(void);
 static void back_cb(lv_event_t *e) { (void)e; page = PAGE_HOME; refresh(); }
 static void lang_cb(lv_event_t *e) {
     (void)e;
+    if (page == PAGE_WIFI || page == PAGE_DEFENSE || page == PAGE_ANALYTICS) {
+        if (scan_ready && !scan_busy && scan_result == ESP_OK) {
+            if (sec_report_wifi(results, ap_count))
+                lv_label_set_text(body, lang == LANG_VI ?
+                    "Đã xuất Wi-Fi JSON qua USB serial.\\nKiểm tra PC để lưu báo cáo." :
+                    "Wi-Fi JSON sent to USB console.\\nSave it on the host PC.");
+            else lv_label_set_text(body, "Export failed");
+        }
+        return;
+    }
+    if (page == PAGE_BLE) {
+        if (ble_ready && !ble_busy && ble_result == ESP_OK) {
+            if (sec_report_ble(ble_results, ble_count))
+                lv_label_set_text(body, lang == LANG_VI ?
+                    "Đã xuất BLE JSON qua USB serial.\\nKiểm tra PC để lưu báo cáo." :
+                    "BLE JSON sent to USB console.\\nSave it on the host PC.");
+            else lv_label_set_text(body, "Export failed");
+        }
+        return;
+    }
+
     if (page == PAGE_CONTROL) {
         bool queued = sec_lab_request(SEC_LAB_LED_OFF);
         lv_label_set_text(body, queued ? (lang == LANG_VI ? "Đã gửi yêu cầu LED OFF.\nKiểm tra phản hồi trên PC.\nChưa xác nhận đích đã thực hiện." : "LED OFF request sent.\nCheck PC agent for confirmation.") : "Console unavailable.");
@@ -270,9 +292,9 @@ static void refresh(void) {
     }
     if (page == PAGE_WIFI || page == PAGE_BLE || page == PAGE_CONTROL) lv_obj_remove_flag(start_btn, LV_OBJ_FLAG_HIDDEN);
     else lv_obj_add_flag(start_btn, LV_OBJ_FLAG_HIDDEN);
-    if (page == PAGE_SETTINGS || page == PAGE_CONTROL) lv_obj_remove_flag(lang_btn, LV_OBJ_FLAG_HIDDEN);
+    if (page == PAGE_SETTINGS || page == PAGE_CONTROL || ((page == PAGE_WIFI || page == PAGE_DEFENSE || page == PAGE_ANALYTICS) && scan_ready && !scan_busy && scan_result == ESP_OK) || (page == PAGE_BLE && ble_ready && !ble_busy && ble_result == ESP_OK)) lv_obj_remove_flag(lang_btn, LV_OBJ_FLAG_HIDDEN);
     else lv_obj_add_flag(lang_btn, LV_OBJ_FLAG_HIDDEN);
-    lv_label_set_text(lv_obj_get_child(lang_btn,0), page == PAGE_CONTROL ? "LED OFF" : (lang == LANG_VI ? "EN" : "VI"));
+    lv_label_set_text(lv_obj_get_child(lang_btn,0), page == PAGE_CONTROL ? "LED OFF" : (page == PAGE_SETTINGS ? (lang == LANG_VI ? "EN" : "VI") : (lang == LANG_VI ? "Xuất JSON" : "JSON")));
     lv_label_set_text(lv_obj_get_child(start_btn,0), page == PAGE_CONTROL ? "LED ON" : (((page==PAGE_WIFI && scan_busy) || (page==PAGE_BLE && ble_busy)) ? (lang == LANG_VI ? "Dừng" : "Stop") : (lang == LANG_VI ? "Quét" : "Scan")));
     if (page == PAGE_WIFI) render_wifi();
     if (page == PAGE_BLE) render_ble();
