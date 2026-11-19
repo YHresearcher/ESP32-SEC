@@ -1,2 +1,3 @@
 #pragma once
-void sec_ui_init(void);
+#include <stdbool.h>
+void sec_ui_init(bool recovery_mode);
