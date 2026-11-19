@@ -47,8 +47,8 @@ jobs:
           set -euo pipefail
           STAMP="$(TZ=Asia/Ho_Chi_Minh date +'%d-%m-%Y_%H-%M')"
           TAGSTAMP="$(TZ=Asia/Ho_Chi_Minh date +'%Y%m%d-%H%M')"
-          PREFIX="ESP32-SEC_v0.2.2-alpha_${STAMP}"
-          echo "RELEASE_TAG=v0.2.2-alpha-${TAGSTAMP}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          PREFIX="ESP32-SEC_v0.3.0-rc-preview_${STAMP}"
+          echo "RELEASE_TAG=v0.3.0-rc-preview-${TAGSTAMP}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
           echo "BUILD_PREFIX=$PREFIX" >> "$GITHUB_ENV"
           mkdir -p release web/firmware
 
@@ -147,13 +147,13 @@ jobs:
         run: |
           set -euo pipefail
           cat > release-notes.md <<'NOTES'
-          # ESP32-SEC v0.2.2 alpha — CONTRAST AND AUDIT PRE-RC (HARDWARE UNVERIFIED)
+          # ESP32-SEC v0.3.0 RC PREVIEW — SOFTWARE-COMPLETE CANDIDATE, HARDWARE GATES OPEN (HARDWARE UNVERIFIED)
           Hardware: ESP32-S3 N16R8, ST7789V 240x320, XPT2046 (existing Chibi wiring).
-          The firmware compiled in CI but has NOT passed a physical-device smoke test.
+          The firmware CI is not proof of the eight real-hardware RC acceptance gates. This is a PREVIEW, not the final promoted RC.
           The public web flasher offers direct installation after the standard browser USB permission dialog.
           Choose the correct USB device. This is an experimental build and may not boot correctly.
-          Includes explicit white-on-dark UI, nine non-overlapping menu tiles, Wi-Fi configuration risk summary, BLE signal bands, and LCD recovery.
-          Unverified on real hardware: LCD, touch, radio coexistence, lab control, boot recovery. No disruptive radio tools.
+          Includes high-contrast display, nine non-overlapping menu tiles, Wi-Fi risk and BLE signal audits, boot recovery and operator-initiated USB JSON evidence export.
+          User reports prior LCD blank-screen regression resolved. Other hardware acceptance tests remain pending. No exploit or disruptive radio tools.
           Flash offsets are generated from ESP-IDF flasher_args.json, not hand-entered.
           NOTES
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
@@ -163,7 +163,7 @@ jobs:
           gh release create "$RELEASE_TAG" release/*.bin release/*_flasher_args.json release/SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "ESP32-SEC v0.2.2-alpha · ${BUILD_PREFIX}" \
+            --title "ESP32-SEC v0.3.0-rc-preview · ${BUILD_PREFIX}" \
             --notes-file release-notes.md --prerelease
 
       # A GitHub Release may be blocked by repo Actions token permissions; website deploy is independent.
