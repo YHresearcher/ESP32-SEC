@@ -4,6 +4,7 @@
 #include "feature_registry.h"
 #include "security_audit.h"
 #include "lab_link.h"
+#include "boot_guard.h"
 #include "esp_lvgl_port.h"
 #include "esp_log.h"
 #include "nvs.h"
@@ -249,13 +250,39 @@ static void refresh(void) {
 }
 static void ui_timer(lv_timer_t *timer) {
     (void)timer;
+    static unsigned ticks = 0;
+    // Mark a boot healthy only after the LVGL task has executed several ticks.
+    if (ticks < 4 && ++ticks == 4) {
+        esp_err_t status = sec_boot_guard_healthy();
+        if (status != ESP_OK) ESP_LOGW("SEC_UI", "boot guard clear failed: %s", esp_err_to_name(status));
+    }
     static bool prev_wifi_busy = false, prev_ble_busy = false;
     if (prev_wifi_busy != scan_busy || prev_ble_busy != ble_busy) {
         prev_wifi_busy = scan_busy; prev_ble_busy = ble_busy;
         if (page == PAGE_WIFI || page == PAGE_BLE) refresh();
     }
 }
-void sec_ui_init(void) {
+void sec_ui_init(bool recovery_mode) {
+    if (recovery_mode) {
+        if (!lvgl_port_lock(1000)) {
+            ESP_LOGE("SEC_UI", "Recovery LVGL mutex timeout");
+            return;
+        }
+        root = lv_screen_active();
+        lv_obj_set_style_bg_color(root, lv_color_hex(0x092033), 0);
+        lv_obj_set_style_text_color(root, lv_color_hex(0xFFFFFF), 0);
+        lv_obj_set_style_text_font(root, &lv_font_montserrat_16, 0);
+        lv_obj_t *recovery_label = lv_label_create(root);
+        lv_obj_set_width(recovery_label, 215);
+        lv_label_set_text(recovery_label,
+            "ESP32-SEC RECOVERY\n\nRepeated incomplete boots\nWi-Fi / BLE / touch OFF\n\nUSB serial: 115200\nCheck crash logs.\n\nRestart to retry normal UI.");
+        lv_label_set_long_mode(recovery_label, LV_LABEL_LONG_WRAP);
+        lv_obj_center(recovery_label);
+        lv_timer_create(ui_timer, 1000, NULL);
+        ESP_LOGW("SEC_UI", "RECOVERY_UI_READY");
+        lvgl_port_unlock();
+        return;
+    }
     nvs_handle_t h;
     if (nvs_open("sec_ui", NVS_READONLY, &h) == ESP_OK) {
         uint8_t n = 0;
