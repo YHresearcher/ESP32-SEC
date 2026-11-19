@@ -35,6 +35,11 @@ static uint16_t ap_count = 0;
 static sec_wifi_ap_t results[SEC_MAX_APS];
 static char report[1500];
 static char diag[480];
+// High-contrast palette. Explicitly style child text: LVGL button theme may
+// override inherited text color and hide labels on dark surfaces.
+#define SEC_TEXT_WHITE 0xFFFFFF
+#define SEC_BG_PANEL 0x10283A
+#define SEC_BG_BUTTON 0x19526A
 static const char *menus[2][9] = {
     {"Wi-Fi", "Bluetooth BLE", "Phòng vệ", "Phân tích", "Chẩn đoán", "Cài đặt", "Pentest Lab", "Mô-đun", "Điều khiển"},
     {"Wi-Fi", "Bluetooth BLE", "Defense", "Analytics", "Diagnostics", "Settings", "Pentest Lab", "Modules", "Lab Control"},
@@ -273,6 +278,7 @@ void sec_ui_init(bool recovery_mode) {
         lv_obj_set_style_text_color(root, lv_color_hex(0xFFFFFF), 0);
         lv_obj_set_style_text_font(root, &lv_font_montserrat_16, 0);
         lv_obj_t *recovery_label = lv_label_create(root);
+        lv_obj_set_style_text_color(recovery_label, lv_color_hex(SEC_TEXT_WHITE), 0);
         lv_obj_set_width(recovery_label, 215);
         lv_label_set_text(recovery_label,
             "ESP32-SEC RECOVERY\n\nRepeated incomplete boots\nWi-Fi / BLE / touch OFF\n\nUSB serial: 115200\nCheck crash logs.\n\nRestart to retry normal UI.");
@@ -292,35 +298,40 @@ void sec_ui_init(bool recovery_mode) {
     if (!lvgl_port_lock(1000)) { ESP_LOGE("SEC_UI", "LVGL mutex timeout"); return; }
     root = lv_screen_active();
     lv_obj_set_style_bg_color(root, lv_color_hex(0x0B1728), 0);
-    lv_obj_set_style_text_color(root, lv_color_hex(0xF1F6FE), 0);
+    lv_obj_set_style_text_color(root, lv_color_hex(SEC_TEXT_WHITE), 0);
     lv_obj_set_style_text_font(root, &sec_font_vi_13, 0);
     heading = lv_label_create(root);
     lv_obj_set_style_text_font(heading, &sec_font_vi_13, 0);
-    lv_obj_set_style_text_color(heading, lv_color_hex(0x4BE1D9), 0);
+    lv_obj_set_style_text_color(heading, lv_color_hex(SEC_TEXT_WHITE), 0);
     lv_obj_align(heading, LV_ALIGN_TOP_MID, 0, 9);
     for (int i=0;i<9;i++) {
         tiles[i] = lv_button_create(root);
         if (!tiles[i]) { ESP_LOGE("SEC_UI", "Tile %d allocation failed", i); continue; }
         lv_obj_set_size(tiles[i], 106, 48);
         lv_obj_set_pos(tiles[i], 10+(i%2)*114, 40+(i/2)*54);
-        lv_obj_set_style_bg_color(tiles[i], lv_color_hex(0x14364C), 0);
+        lv_obj_set_style_bg_color(tiles[i], lv_color_hex(SEC_BG_BUTTON), 0);
+        lv_obj_set_style_text_color(tiles[i], lv_color_hex(SEC_TEXT_WHITE), 0);
         lv_obj_set_style_border_width(tiles[i], 1, 0);
         lv_obj_set_style_border_color(tiles[i], lv_color_hex(0x21A9B1), 0);
         lv_obj_set_style_radius(tiles[i], 9, 0);
         lv_obj_add_event_cb(tiles[i], tile_cb, LV_EVENT_CLICKED, (void*)(uintptr_t)i);
         lv_obj_t *label = lv_label_create(tiles[i]);
+        lv_obj_set_style_text_color(label, lv_color_hex(SEC_TEXT_WHITE), 0);
         lv_obj_center(label);
     }
     content_panel = lv_obj_create(root);
     lv_obj_set_pos(content_panel, 8, 43);
     lv_obj_set_size(content_panel, 224, 222);
-    lv_obj_set_style_bg_color(content_panel, lv_color_hex(0x0E2335), 0);
+    lv_obj_set_style_bg_color(content_panel, lv_color_hex(SEC_BG_PANEL), 0);
+    lv_obj_set_style_text_color(content_panel, lv_color_hex(SEC_TEXT_WHITE), 0);
     lv_obj_set_style_border_color(content_panel, lv_color_hex(0x236D7A), 0);
     lv_obj_set_style_border_width(content_panel, 1, 0);
     lv_obj_set_style_radius(content_panel, 8, 0);
     lv_obj_set_style_pad_all(content_panel, 8, 0);
     lv_obj_add_flag(content_panel, LV_OBJ_FLAG_SCROLLABLE);
     body = lv_label_create(content_panel);
+    lv_obj_set_style_text_color(body, lv_color_hex(SEC_TEXT_WHITE), 0);
+    lv_obj_set_style_text_font(body, &sec_font_vi_13, 0);
     lv_obj_set_width(body, 202);
     lv_label_set_long_mode(body, LV_LABEL_LONG_WRAP);
     lv_obj_align(body, LV_ALIGN_TOP_LEFT, 0, 0);
@@ -328,19 +339,28 @@ void sec_ui_init(bool recovery_mode) {
     lv_obj_set_size(back_btn, 86, 37);
     lv_obj_align(back_btn, LV_ALIGN_BOTTOM_LEFT, 9, -10);
     lv_obj_add_event_cb(back_btn, back_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_set_style_bg_color(back_btn, lv_color_hex(SEC_BG_BUTTON), 0);
+    lv_obj_set_style_text_color(back_btn, lv_color_hex(SEC_TEXT_WHITE), 0);
     lv_obj_t *bl = lv_label_create(back_btn);
+    lv_obj_set_style_text_color(bl, lv_color_hex(SEC_TEXT_WHITE), 0);
     lv_label_set_text(bl, "Trở về"); lv_obj_center(bl);
     start_btn = lv_button_create(root);
     lv_obj_set_size(start_btn, 86, 37);
     lv_obj_align(start_btn, LV_ALIGN_BOTTOM_RIGHT, -9, -10);
     lv_obj_add_event_cb(start_btn, start_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_set_style_bg_color(start_btn, lv_color_hex(SEC_BG_BUTTON), 0);
+    lv_obj_set_style_text_color(start_btn, lv_color_hex(SEC_TEXT_WHITE), 0);
     lv_obj_t *sl = lv_label_create(start_btn);
+    lv_obj_set_style_text_color(sl, lv_color_hex(SEC_TEXT_WHITE), 0);
     lv_label_set_text(sl, "Quét"); lv_obj_center(sl);
     lang_btn = lv_button_create(root);
     lv_obj_set_size(lang_btn, 86, 37);
     lv_obj_align(lang_btn, LV_ALIGN_BOTTOM_RIGHT, -9, -10);
     lv_obj_add_event_cb(lang_btn, lang_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_set_style_bg_color(lang_btn, lv_color_hex(SEC_BG_BUTTON), 0);
+    lv_obj_set_style_text_color(lang_btn, lv_color_hex(SEC_TEXT_WHITE), 0);
     lv_obj_t *ll = lv_label_create(lang_btn);
+    lv_obj_set_style_text_color(ll, lv_color_hex(SEC_TEXT_WHITE), 0);
     lv_obj_center(ll);
     lv_timer_create(ui_timer, 1000, NULL);
     refresh();
