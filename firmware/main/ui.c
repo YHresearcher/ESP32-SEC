@@ -129,8 +129,8 @@ static void lang_cb(lv_event_t *e) {
         if (scan_ready && !scan_busy && scan_result == ESP_OK) {
             if (sec_report_wifi(results, ap_count))
                 lv_label_set_text(body, lang == LANG_VI ?
-                    "Đã xuất Wi-Fi JSON qua USB serial.\\nKiểm tra PC để lưu báo cáo." :
-                    "Wi-Fi JSON sent to USB console.\\nSave it on the host PC.");
+                    "Đã xuất Wi-Fi JSON qua USB serial.\nKiểm tra PC để lưu báo cáo." :
+                    "Wi-Fi JSON sent to USB console.\nSave it on the host PC.");
             else lv_label_set_text(body, "Export failed");
         }
         return;
@@ -139,8 +139,8 @@ static void lang_cb(lv_event_t *e) {
         if (ble_ready && !ble_busy && ble_result == ESP_OK) {
             if (sec_report_ble(ble_results, ble_count))
                 lv_label_set_text(body, lang == LANG_VI ?
-                    "Đã xuất BLE JSON qua USB serial.\\nKiểm tra PC để lưu báo cáo." :
-                    "BLE JSON sent to USB console.\\nSave it on the host PC.");
+                    "Đã xuất BLE JSON qua USB serial.\nKiểm tra PC để lưu báo cáo." :
+                    "BLE JSON sent to USB console.\nSave it on the host PC.");
             else lv_label_set_text(body, "Export failed");
         }
         return;
