@@ -2,12 +2,15 @@
 
 static const sec_feature_info_t features[] = {
     {"WIFI_SCAN", "Wi-Fi Scanner", SEC_REQUIRE_CORE, true},
+    {"WIFI_CONFIG_AUDIT", "Wi-Fi Encryption / Weak Configuration Audit", SEC_REQUIRE_CORE, true},
+    {"WIFI_CHANNEL_COUNTS", "Wi-Fi Channel Occupancy Count", SEC_REQUIRE_CORE, true},
     {"WIFI_PACKET", "Wi-Fi Packet Monitor", SEC_REQUIRE_SOFTWARE, false},
     {"WIFI_DEAUTH_DETECT", "Deauth Detector", SEC_REQUIRE_SOFTWARE, false},
     {"WIFI_WPS", "WPS Scanner", SEC_REQUIRE_SOFTWARE, false},
     {"WIFI_ARP", "ARP Scanner", SEC_REQUIRE_SOFTWARE, false},
     {"WIFI_LOCAL_PORTAL", "Local Provisioning Portal", SEC_REQUIRE_SOFTWARE, false},
     {"BLE_SCAN", "BLE Scanner", SEC_REQUIRE_CORE, true},
+    {"BLE_SIGNAL_AUDIT", "BLE RSSI Signal Classification", SEC_REQUIRE_CORE, true},
     {"BLE_MONITOR", "BLE Advertisement Monitor", SEC_REQUIRE_SOFTWARE, false},
     {"BLE_AIRTAG", "AirTag Advertisement Identifier", SEC_REQUIRE_SOFTWARE, false},
     {"BLE_SKIMMER", "BLE Anomaly Heuristics", SEC_REQUIRE_SOFTWARE, false},
@@ -29,6 +32,9 @@ static const sec_feature_info_t features[] = {
     {"SYS_SD_UPDATE", "Firmware Update from SD", SEC_REQUIRE_SD, false},
     {"SYS_TOUCH_CAL", "Touch Calibration", SEC_REQUIRE_SOFTWARE, false},
     {"SYS_SETTINGS", "Device Settings", SEC_REQUIRE_CORE, true},
+    {"LOCAL_PARSER_SELFTEST", "Local Parser Bounds Test", SEC_REQUIRE_CORE, true},
+    {"LOCAL_LAB_SERIAL", "Allowlisted USB Serial Lab Requests", SEC_REQUIRE_CORE, true},
+    {"BOOT_RECOVERY", "Repeated Boot Recovery Screen", SEC_REQUIRE_CORE, true},
 };
 
 const sec_feature_info_t *sec_feature_catalog(size_t *count) {
