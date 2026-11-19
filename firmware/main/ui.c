@@ -294,6 +294,12 @@ static void refresh(void) {
     else lv_obj_add_flag(start_btn, LV_OBJ_FLAG_HIDDEN);
     if (page == PAGE_SETTINGS || page == PAGE_CONTROL || ((page == PAGE_WIFI || page == PAGE_DEFENSE || page == PAGE_ANALYTICS) && scan_ready && !scan_busy && scan_result == ESP_OK) || (page == PAGE_BLE && ble_ready && !ble_busy && ble_result == ESP_OK)) lv_obj_remove_flag(lang_btn, LV_OBJ_FLAG_HIDDEN);
     else lv_obj_add_flag(lang_btn, LV_OBJ_FLAG_HIDDEN);
+    // Export and scan share the footer only after a completed scan.
+    // Move scan to center so buttons cannot overlap at 240x320.
+    bool report_export_visible = (page == PAGE_WIFI && scan_ready && !scan_busy && scan_result == ESP_OK) ||
+                                 (page == PAGE_BLE && ble_ready && !ble_busy && ble_result == ESP_OK);
+    if (report_export_visible) lv_obj_align(start_btn, LV_ALIGN_BOTTOM_MID, 0, -10);
+    else lv_obj_align(start_btn, LV_ALIGN_BOTTOM_RIGHT, -9, -10);
     lv_label_set_text(lv_obj_get_child(lang_btn,0), page == PAGE_CONTROL ? "LED OFF" : (page == PAGE_SETTINGS ? (lang == LANG_VI ? "EN" : "VI") : (lang == LANG_VI ? "Xuất JSON" : "JSON")));
     lv_label_set_text(lv_obj_get_child(start_btn,0), page == PAGE_CONTROL ? "LED ON" : (((page==PAGE_WIFI && scan_busy) || (page==PAGE_BLE && ble_busy)) ? (lang == LANG_VI ? "Dừng" : "Stop") : (lang == LANG_VI ? "Quét" : "Scan")));
     if (page == PAGE_WIFI) render_wifi();
