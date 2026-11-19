@@ -130,7 +130,16 @@ jobs:
           PYMERGE
           (cd release && sha256sum *.bin > SHA256SUMS.txt)
 
+      - name: Upload recovery alpha binaries as Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ESP32-SEC-recovery-alpha-${{ github.sha }}
+          path: release/
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Publish GitHub prerelease with timestamped assets (optional)
+        id: release_outcome
         continue-on-error: true
         shell: bash
         env:
@@ -158,6 +167,9 @@ jobs:
             --notes-file release-notes.md --prerelease
 
       # A GitHub Release may be blocked by repo Actions token permissions; website deploy is independent.
+      - name: Explain optional GitHub Release permission failure
+        if: ${{ steps.release_outcome.outcome == 'failure' }}
+        run: echo "::warning::GitHub Release failed; use the downloadable Actions artifact or Web Flasher. Check Actions token contents:write permissions."
       - name: Upload website including firmware and manifest
         uses: actions/upload-pages-artifact@v3
         with:
