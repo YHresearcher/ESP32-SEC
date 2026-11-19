@@ -13,8 +13,8 @@
 
 static const char *TAG = "SEC_BOARD";
 // Permanent DMA-safe buffer for a boot LCD probe.
-static uint16_t s_lcd_probe[SEC_LCD_WIDTH * 16] __attribute__((aligned(4)));
-esp_err_t sec_board_init(lv_display_t **out_display) {
+// Do not queue diagnostic SPI writes before LVGL takes ownership.
+esp_err_t sec_board_init(lv_display_t **out_display, bool recovery_mode) {
     if (!out_display) return ESP_ERR_INVALID_ARG;
     *out_display = NULL;
     const spi_bus_config_t bus = {
@@ -53,17 +53,10 @@ esp_err_t sec_board_init(lv_display_t **out_display) {
     ESP_RETURN_ON_ERROR(esp_lcd_panel_swap_xy(panel, false), TAG, "swap");
     ESP_RETURN_ON_ERROR(esp_lcd_panel_mirror(panel, false, false), TAG, "mirror");
     ESP_RETURN_ON_ERROR(esp_lcd_panel_disp_on_off(panel, true), TAG, "display on");
-    ESP_LOGI(TAG, "SEC_LCD_STAGE_09: submit white test stripe");
-    for (size_t i=0; i<SEC_LCD_WIDTH*16; i++) s_lcd_probe[i]=0xFFFF;
-    // One immutable white buffer is reused for all strips; SPI DMA may finish
-    // after draw_bitmap returns, so we never modify its pixels.
-    for (int y = 0; y < SEC_LCD_HEIGHT; y += 16) {
-        ESP_RETURN_ON_ERROR(esp_lcd_panel_draw_bitmap(panel, 0, y, SEC_LCD_WIDTH, y + 16,
-                                                       s_lcd_probe), TAG, "LCD probe");
-    }
-    ESP_LOGI(TAG, "SEC_LCD_TEST_WHITE: white screen should be visible now");
-    vTaskDelay(pdMS_TO_TICKS(1500));
-    ESP_LOGI(TAG, "SEC_LCD_STAGE_10: stripe submitted");
+    // The previous 20 queued white transfers reused the same DMA buffer and
+    // intentionally flashed the screen. Skip the probe and hand the panel to
+    // LVGL immediately; avoid SPI queue contention during first flush.
+    ESP_LOGI(TAG, "SEC_LCD_STAGE_09: panel ready; skip white DMA probe");
     const lvgl_port_cfg_t port_cfg = ESP_LVGL_PORT_INIT_CONFIG();
     ESP_LOGI(TAG, "SEC_LCD_STAGE_11: LVGL init begin");
     ESP_RETURN_ON_ERROR(lvgl_port_init(&port_cfg), TAG, "LVGL");
@@ -87,6 +80,10 @@ esp_err_t sec_board_init(lv_display_t **out_display) {
     *out_display = display;
     ESP_LOGI(TAG, "SEC_LCD_STAGE_14: LVGL display ready; RGB565 swap_bytes=1 RGB order (no inversion)");
 
+    if (recovery_mode) {
+        ESP_LOGW(TAG, "RECOVERY: touch driver skipped; no Wi-Fi/BLE will start");
+        return ESP_OK;
+    }
     const gpio_config_t irq_cfg = {
         .pin_bit_mask = (1ULL << SEC_TOUCH_IRQ),
         .mode = GPIO_MODE_INPUT, .pull_up_en = GPIO_PULLUP_ENABLE,
