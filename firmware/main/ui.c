@@ -350,8 +350,8 @@ void sec_ui_init(bool recovery_mode) {
     for (int i=0;i<9;i++) {
         tiles[i] = lv_button_create(root);
         if (!tiles[i]) { ESP_LOGE("SEC_UI", "Tile %d allocation failed", i); continue; }
-        lv_obj_set_size(tiles[i], 106, 48);
-        lv_obj_set_pos(tiles[i], 10+(i%2)*114, 40+(i/2)*54);
+        lv_obj_set_size(tiles[i], 106, 40);
+        lv_obj_set_pos(tiles[i], 10+(i%2)*114, 39+(i/2)*44);
         lv_obj_set_style_bg_color(tiles[i], lv_color_hex(SEC_BG_BUTTON), 0);
         lv_obj_set_style_text_color(tiles[i], lv_color_hex(SEC_TEXT_WHITE), 0);
         lv_obj_set_style_border_width(tiles[i], 1, 0);
@@ -360,6 +360,9 @@ void sec_ui_init(bool recovery_mode) {
         lv_obj_add_event_cb(tiles[i], tile_cb, LV_EVENT_CLICKED, (void*)(uintptr_t)i);
         lv_obj_t *label = lv_label_create(tiles[i]);
         lv_obj_set_style_text_color(label, lv_color_hex(SEC_TEXT_WHITE), 0);
+        lv_obj_set_width(label, 100);
+        lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+        lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_center(label);
     }
     content_panel = lv_obj_create(root);
