@@ -11,6 +11,8 @@
 #include "nvs.h"
 #include "esp_heap_caps.h"
 #include "esp_psram.h"
+#include "esp_system.h"
+#include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "lvgl.h"
@@ -314,9 +316,20 @@ static void refresh(void) {
     if (page == PAGE_DIAG) {
         size_t feature_total = 0;
         sec_feature_catalog(&feature_total);
+        uint64_t uptime_seconds = (uint64_t)esp_timer_get_time() / 1000000ULL;
         snprintf(diag, sizeof(diag),
-            "ESP32-S3 N16R8\nPSRAM: %u KB\nFree heap: %u KB\nLCD: ST7789V 240x320\nTouch: XPT2046\nBL: not controlled\nRegistry: %u built / %u planned",
-            (unsigned)(esp_psram_get_size()/1024), (unsigned)(esp_get_free_heap_size()/1024),
+            "ESP32-SEC RC PREVIEW\nESP32-S3 N16R8\n\nUptime: %llu s\nReset reason: %d\n"
+            "Heap: %u KB\nMin free 8-bit: %u KB\nPSRAM: %u KB\n\n"
+            "LCD: ST7789V 240x320\nTouch: XPT2046\n\n"
+            "Wi-Fi scan: %s\nBLE scan: %s\n"
+            "Feature registry: %u / %u\n"
+            "Hardware RC gate: PENDING",
+            (unsigned long long)uptime_seconds, (int)esp_reset_reason(),
+            (unsigned)(esp_get_free_heap_size() / 1024),
+            (unsigned)(heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT) / 1024),
+            (unsigned)(esp_psram_get_size() / 1024),
+            scan_busy ? "BUSY" : (scan_ready ? (scan_result == ESP_OK ? "DONE" : "ERROR") : "NOT RUN"),
+            ble_busy ? "BUSY" : (ble_ready ? (ble_result == ESP_OK ? "DONE" : "ERROR") : "NOT RUN"),
             (unsigned)sec_feature_compiled_count(), (unsigned)feature_total);
         lv_label_set_text(body, diag);
     }
