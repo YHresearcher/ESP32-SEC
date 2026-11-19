@@ -299,7 +299,7 @@ static void refresh(void) {
     bool report_export_visible = (page == PAGE_WIFI && scan_ready && !scan_busy && scan_result == ESP_OK) ||
                                  (page == PAGE_BLE && ble_ready && !ble_busy && ble_result == ESP_OK);
     if (report_export_visible) lv_obj_align(start_btn, LV_ALIGN_BOTTOM_MID, 0, -10);
-    else lv_obj_align(start_btn, LV_ALIGN_BOTTOM_RIGHT, -9, -10);
+    else lv_obj_align(start_btn, LV_ALIGN_BOTTOM_RIGHT, -4, -10);
     lv_label_set_text(lv_obj_get_child(lang_btn,0), page == PAGE_CONTROL ? "LED OFF" : (page == PAGE_SETTINGS ? (lang == LANG_VI ? "EN" : "VI") : (lang == LANG_VI ? "Xuất JSON" : "JSON")));
     lv_label_set_text(lv_obj_get_child(start_btn,0), page == PAGE_CONTROL ? "LED ON" : (((page==PAGE_WIFI && scan_busy) || (page==PAGE_BLE && ble_busy)) ? (lang == LANG_VI ? "Dừng" : "Stop") : (lang == LANG_VI ? "Quét" : "Scan")));
     if (page == PAGE_WIFI) render_wifi();
@@ -410,8 +410,8 @@ void sec_ui_init(bool recovery_mode) {
     lv_label_set_long_mode(body, LV_LABEL_LONG_WRAP);
     lv_obj_align(body, LV_ALIGN_TOP_LEFT, 0, 0);
     back_btn = lv_button_create(root);
-    lv_obj_set_size(back_btn, 86, 37);
-    lv_obj_align(back_btn, LV_ALIGN_BOTTOM_LEFT, 9, -10);
+    lv_obj_set_size(back_btn, 72, 37);
+    lv_obj_align(back_btn, LV_ALIGN_BOTTOM_LEFT, 4, -10);
     lv_obj_add_event_cb(back_btn, back_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_set_style_bg_color(back_btn, lv_color_hex(SEC_BG_BUTTON), 0);
     lv_obj_set_style_text_color(back_btn, lv_color_hex(SEC_TEXT_WHITE), 0);
@@ -419,8 +419,8 @@ void sec_ui_init(bool recovery_mode) {
     lv_obj_set_style_text_color(bl, lv_color_hex(SEC_TEXT_WHITE), 0);
     lv_label_set_text(bl, "Trở về"); lv_obj_center(bl);
     start_btn = lv_button_create(root);
-    lv_obj_set_size(start_btn, 86, 37);
-    lv_obj_align(start_btn, LV_ALIGN_BOTTOM_RIGHT, -9, -10);
+    lv_obj_set_size(start_btn, 72, 37);
+    lv_obj_align(start_btn, LV_ALIGN_BOTTOM_RIGHT, -4, -10);
     lv_obj_add_event_cb(start_btn, start_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_set_style_bg_color(start_btn, lv_color_hex(SEC_BG_BUTTON), 0);
     lv_obj_set_style_text_color(start_btn, lv_color_hex(SEC_TEXT_WHITE), 0);
@@ -428,8 +428,8 @@ void sec_ui_init(bool recovery_mode) {
     lv_obj_set_style_text_color(sl, lv_color_hex(SEC_TEXT_WHITE), 0);
     lv_label_set_text(sl, "Quét"); lv_obj_center(sl);
     lang_btn = lv_button_create(root);
-    lv_obj_set_size(lang_btn, 86, 37);
-    lv_obj_align(lang_btn, LV_ALIGN_BOTTOM_RIGHT, -9, -10);
+    lv_obj_set_size(lang_btn, 72, 37);
+    lv_obj_align(lang_btn, LV_ALIGN_BOTTOM_RIGHT, -4, -10);
     lv_obj_add_event_cb(lang_btn, lang_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_set_style_bg_color(lang_btn, lv_color_hex(SEC_BG_BUTTON), 0);
     lv_obj_set_style_text_color(lang_btn, lv_color_hex(SEC_TEXT_WHITE), 0);
