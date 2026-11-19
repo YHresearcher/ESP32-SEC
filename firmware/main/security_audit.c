@@ -13,6 +13,11 @@ void sec_wifi_audit(const sec_wifi_ap_t *aps, size_t count, sec_wifi_audit_t *ou
         if (p->authmode == 0) ++out->open;  // WIFI_AUTH_OPEN
         if (p->authmode == 1) ++out->wep;   // WIFI_AUTH_WEP
         if (p->authmode == 2) ++out->weak_legacy; // WPA PSK legacy
+        if (p->authmode == 0 || p->authmode == 1 || p->authmode == 2)
+            ++out->high_risk; // Configuration only; not proof of exploitation.
+        if (p->authmode >= 3) ++out->wpa2_or_better;
+        if (p->rssi >= -60) ++out->strong_signal;
+        if (p->rssi <= -85) ++out->low_signal;
         if (!p->ssid[0]) ++out->hidden;
         if (p->channel >= 1 && p->channel <= 14) out->channels[p->channel]++;
         if (p->rssi > out->signal_best) out->signal_best = p->rssi;
@@ -48,6 +53,7 @@ void sec_ble_audit(const sec_ble_device_t *devices, size_t count, sec_ble_audit_
         else ++out->anonymous;
         if (devices[i].rssi >= -60) ++out->strong;
         if (devices[i].rssi <= -85) ++out->weak;
+        if (devices[i].rssi > -85 && devices[i].rssi < -60) ++out->moderate;
     }
 }
 
