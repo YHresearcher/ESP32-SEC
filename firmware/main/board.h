@@ -1,5 +1,6 @@
 #pragma once
 #include "esp_err.h"
+#include <stdbool.h>
 #include "lvgl.h"
 // GPIOs taken from working ModESP32 Chibi ST7789V/XPT2046 profile.
 #define SEC_LCD_WIDTH 240
@@ -13,4 +14,4 @@
 #define SEC_TOUCH_CS 9
 #define SEC_TOUCH_IRQ 7
 // Backlight GPIO intentionally unset: existing Chibi config leaves it unverified.
-esp_err_t sec_board_init(lv_display_t **out_display);
+esp_err_t sec_board_init(lv_display_t **out_display, bool recovery_mode);
