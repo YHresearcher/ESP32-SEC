@@ -55,33 +55,55 @@ static void persist_language(void) {
     nvs_commit(h);
     nvs_close(h);
 }
+static const char *sec_wifi_auth_name(int a) {
+    switch (a) {
+        case 0: return "OPEN";
+        case 1: return "WEP";
+        case 2: return "WPA";
+        case 3: return "WPA2";
+        case 4: return "MIXED";
+        case 5: return "WPA2-ENT";
+        case 6: return "WPA3";
+        case 7: return "WPA2/WPA3";
+        default: return "OTHER";
+    }
+}
+static const char *sec_wifi_risk_label(int a) {
+    if (a == 0 || a == 1 || a == 2) return "HIGH";
+    if (a == 3 || a == 4 || a == 5) return "REVIEW";
+    if (a == 6 || a == 7) return "LOW";
+    return "UNKNOWN";
+}
 static void render_analytics(void) {
     if (!scan_ready || scan_result != ESP_OK) {
-        lv_label_set_text(body, lang == LANG_VI ? "Quét Wi-Fi để phân tích mật độ kênh." : "Scan Wi-Fi to analyze channel density.");
+        lv_label_set_text(body, lang == LANG_VI ?
+            "Phân tích kênh\n\nHãy chạy Wi-Fi Scan trước.\nSau đó xem kênh 1/6/11."
+            : "Channel analytics\n\nRun Wi-Fi Scan first.");
         return;
     }
     sec_wifi_audit_t a;
     sec_wifi_audit(results, ap_count, &a);
-    snprintf(report, sizeof(report),
-        lang == LANG_VI ?
-        "PHÂN TÍCH 2.4 GHz\nAP quan sát: %u\nKênh ít AP nhất: %d\n(Chưa đo nhiễu thực tế)\n\nCH01: %d AP\nCH06: %d AP\nCH11: %d AP\n\nRSSI mạnh nhất: %d dBm" :
-        "2.4 GHz ANALYTICS\nObserved APs: %u\nLeast occupied: CH%d\n(No RF interference measurement)\n\nCH01: %d AP\nCH06: %d AP\nCH11: %d AP\n\nStrongest: %d dBm",
-        a.total, a.recommended_channel, a.channels[1], a.channels[6],
-        a.channels[11], a.signal_best);
+    snprintf(report, sizeof(report), lang == LANG_VI ?
+        "PHÂN TÍCH WI-FI 2.4GHz\n\nAP quan sát: %u\nTín hiệu mạnh: %u\nTín hiệu yếu: %u\n\nCH 01: %d AP\nCH 06: %d AP\nCH 11: %d AP\n\nKênh ít AP nhất: %d\n\nĐây là số lượng AP,\nkhông phải phép đo nhiễu RF.\nChỉ nên đổi kênh trên AP\nmà bạn sở hữu."
+        : "2.4GHz CHANNEL AUDIT\n\nObserved AP: %u\nStrong RSSI: %u\nWeak RSSI: %u\n\nCH 01: %d AP\nCH 06: %d AP\nCH 11: %d AP\n\nLeast occupied: CH%d\n\nAP count only; RF noise\nwas NOT measured.\nChange only your own AP.",
+        a.total, a.strong_signal, a.low_signal,
+        a.channels[1], a.channels[6], a.channels[11], a.recommended_channel);
     lv_label_set_text(body, report);
 }
 static void render_defense(void) {
     if (!scan_ready || scan_result != ESP_OK) {
-        lv_label_set_text(body, lang == LANG_VI ? "Quét Wi-Fi để đánh giá bảo mật." : "Run Wi-Fi scan before audit.");
+        lv_label_set_text(body, lang == LANG_VI ?
+            "KIỂM TRA CẤU HÌNH\n\nQuét Wi-Fi trước để xem\ncác mạng có chuẩn yếu."
+            : "CONFIGURATION AUDIT\n\nRun Wi-Fi Scan first.");
         return;
     }
     sec_wifi_audit_t a;
     sec_wifi_audit(results, ap_count, &a);
-    snprintf(report, sizeof(report),
-        lang == LANG_VI ?
-        "ĐÁNH GIÁ CẤU HÌNH\n\nAP: %u\nMạng mở: %u\nWEP: %u\nWPA cũ: %u\nSSID trùng: %u\nẨn tên: %u\n\nKhuyến nghị: dùng WPA2/WPA3.\nMạng mở không mã hóa.\nSSID trùng không chứng minh tấn công." :
-        "CONFIGURATION AUDIT\n\nAPs: %u\nOpen: %u\nWEP: %u\nLegacy WPA: %u\nRepeated SSID: %u\nHidden: %u\n\nPrefer WPA2/WPA3.\nRepeated SSID does not prove an attack.",
-        a.total,a.open,a.wep,a.weak_legacy,a.duplicate_ssid,a.hidden);
+    snprintf(report, sizeof(report), lang == LANG_VI ?
+        "WI-FI SECURITY AUDIT\n\nTổng AP: %u\nCấu hình rủi ro: %u\n- Open: %u\n- WEP: %u\n- WPA cũ: %u\nWPA2 trở lên*: %u\nSSID trùng: %u\nSSID ẩn: %u\n\nKHUYẾN NGHỊ\n1. Tránh WEP/WPA cũ.\n2. Dùng WPA2-AES/WPA3.\n3. Xác minh SSID trùng.\n\n*Phân loại sơ bộ.\nScan không chứng minh\nthiết bị đã bị tấn công."
+        : "WI-FI SECURITY AUDIT\n\nObserved APs: %u\nWeak configuration: %u\n- Open: %u\n- WEP: %u\n- Legacy WPA: %u\nWPA2 or newer*: %u\nRepeated SSID: %u\nHidden SSID: %u\n\nRECOMMENDATIONS\n1. Avoid WEP/old WPA.\n2. Prefer WPA2-AES/WPA3.\n3. Review repeated SSID.\n\n*Coarse classification.\nA scan cannot prove attack.",
+        a.total, a.high_risk, a.open, a.wep,
+        a.weak_legacy, a.wpa2_or_better, a.duplicate_ssid, a.hidden);
     lv_label_set_text(body, report);
 }
 static void render_lab(void) {
@@ -137,29 +159,36 @@ static void render_ble(void) {
     }
     if (!ble_ready) {
         lv_label_set_text(body, lang == LANG_VI ?
-            "Chạm Quét để tìm BLE.\nKết quả sẽ có phân tích tín hiệu." :
-            "Tap Scan to discover BLE devices.");
+            "BLE DISCOVERY\n\nChạm QUÉT để tìm thiết bị.\nHiển thị RSSI, tên và\nđịa chỉ quan sát được.\n\nRSSI không phải khoảng cách.\nKhông xác minh lỗ hổng."
+            : "BLE DISCOVERY\n\nTap SCAN for devices,\nRSSI and visible address.\nRSSI is NOT distance.\nNo exploit performed.");
         return;
     }
     if (ble_result != ESP_OK) {
-        snprintf(report,sizeof(report),"BLE: %s",esp_err_to_name(ble_result));
-        lv_label_set_text(body,report);
+        snprintf(report, sizeof(report), "BLE: %s", esp_err_to_name(ble_result));
+        lv_label_set_text(body, report);
         return;
     }
     sec_ble_audit_t a;
-    sec_ble_audit(ble_results,ble_count,&a);
+    sec_ble_audit(ble_results, ble_count, &a);
     size_t used=(size_t)snprintf(report,sizeof(report),
         lang == LANG_VI ?
-        "BLE AUDIT\nThiết bị: %u\nCó tên: %u\nẨn tên: %u\nGần (RSSI >= -60): %u\nYếu (<= -85): %u\n\n" :
-        "BLE AUDIT\nDevices: %u\nNamed: %u\nUnnamed: %u\nStrong (>= -60): %u\nWeak (<= -85): %u\n\n",
-        a.total,a.named,a.anonymous,a.strong,a.weak);
-    for(uint16_t i=0;i<ble_count && i<12 && used<sizeof(report)-95;i++) {
-        int n=snprintf(report+used,sizeof(report)-used,"%s\n%d dBm  %s\n",
-            ble_results[i].name,ble_results[i].rssi,ble_results[i].address);
-        if(n<=0 || (size_t)n>=sizeof(report)-used) break;
+        "BLE SIGNAL AUDIT\n\nThiết bị: %u\nCó tên: %u | Không tên: %u\nMạnh >= -60: %u\nVừa: %u | Yếu <= -85: %u\n\n"
+        : "BLE SIGNAL AUDIT\n\nDevices: %u\nNamed: %u | Unnamed: %u\nStrong >= -60: %u\nMid: %u | Weak <= -85: %u\n\n",
+        a.total,a.named,a.anonymous,a.strong,a.moderate,a.weak);
+    for(uint16_t i=0;i<ble_count && i<10 && used<sizeof(report)-120;i++) {
+        const sec_ble_device_t *d=&ble_results[i];
+        const char *tier=d->rssi>=-60?"STRONG":(d->rssi<=-85?"WEAK":"MID");
+        int n=snprintf(report+used,sizeof(report)-used,
+            "%.28s\n%d dBm | %s\n%s\n\n",
+            d->name[0]?d->name:"(unnamed)",(int)d->rssi,tier,d->address);
+        if(n<=0 || (size_t)n>=sizeof(report)-used)break;
         used+=(size_t)n;
     }
-    lv_label_set_text(body,report);
+    if (used < sizeof(report)-80) {
+        snprintf(report+used,sizeof(report)-used,
+            "RSSI != distance.\nScan != vulnerability proof.");
+    }
+    lv_label_set_text(body, report);
 }
 static void start_cb(lv_event_t *e) {
     (void)e;
@@ -190,22 +219,36 @@ static void render_wifi(void) {
         return;
     }
     if (!scan_ready) {
-        lv_label_set_text(body, lang == LANG_VI ? "Chạm Quét để tìm mạng." : "Tap Scan to discover APs.");
+        lv_label_set_text(body, lang == LANG_VI ?
+            "WI-FI SECURITY\n\nChạm QUÉT để kiểm tra.\n\nSau khi quét, chọn:\n- Phòng vệ: đánh giá mã hóa\n- Phân tích: mật độ kênh\n\nChỉ đo thụ động/cơ bản."
+            : "WI-FI SECURITY\n\nTap SCAN.\nThen open Defense for\nsecurity findings or\nAnalytics for channels.");
         return;
     }
     if (scan_result != ESP_OK) {
-        snprintf(report, sizeof(report), "Wi-Fi scan error: %s", esp_err_to_name(scan_result));
+        snprintf(report, sizeof(report), "Wi-Fi: %s", esp_err_to_name(scan_result));
         lv_label_set_text(body, report);
         return;
     }
-    size_t used = (size_t)snprintf(report, sizeof(report), "%u APs found\n\n", ap_count);
-    for (uint16_t i = 0; i < ap_count && i < 12 && used < sizeof(report)-70; i++) {
-        const sec_wifi_ap_t *r = &results[i];
-        int n = snprintf(report + used, sizeof(report) - used,
-            "%s\nCh %u  %d dBm  Auth %d\n", r->ssid[0] ? r->ssid : "<hidden>",
-            r->channel, r->rssi, r->authmode);
-        if (n <= 0 || (size_t)n >= sizeof(report)-used) break;
+    sec_wifi_audit_t audit;
+    sec_wifi_audit(results, ap_count, &audit);
+    size_t used = (size_t)snprintf(report, sizeof(report),
+        lang == LANG_VI ?
+        "WI-FI AUDIT | %u AP\nRủi ro cấu hình: %u\nKênh đề xuất*: %d\n\n"
+        : "WI-FI AUDIT | %u AP\nWeak config: %u\nSuggested channel*: %d\n\n",
+        audit.total, audit.high_risk, audit.recommended_channel);
+    for (uint16_t i=0; i<ap_count && i<10 && used<sizeof(report)-120; i++) {
+        const sec_wifi_ap_t *ap = &results[i];
+        int n = snprintf(report+used, sizeof(report)-used,
+            "%u. %.30s\nCH%u %d dBm | %s\nRisk: %s\n\n",
+            (unsigned)(i+1), ap->ssid[0]?ap->ssid:"(hidden)",
+            (unsigned)ap->channel, (int)ap->rssi,
+            sec_wifi_auth_name(ap->authmode), sec_wifi_risk_label(ap->authmode));
+        if(n<=0 || (size_t)n>=sizeof(report)-used)break;
         used += (size_t)n;
+    }
+    if (used < sizeof(report)-80) {
+        snprintf(report+used, sizeof(report)-used,
+            "*Least AP count CH1/6/11\nNot RF noise. Audit only.");
     }
     lv_label_set_text(body, report);
 }
