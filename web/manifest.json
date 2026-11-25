@@ -1,13 +1,13 @@
 {
-  "name": "ESP32-SEC Chibi — Bruce 2026-11-25 (CI firmware)",
-  "version": "a207993125fd / 2026-11-25",
+  "name": "ESP32-SEC Chibi Touch Fix — 2026-11-25",
+  "version": "fa3698dea9e950bfa94d0fd33bc70d5223db77c4 / 2026-11-25",
   "new_install_prompt_erase": true,
   "builds": [
     {
       "chipFamily": "ESP32-S3",
       "parts": [
         {
-          "path": "firmware/ESP32-SEC_Chibi_20261125_merged.bin",
+          "path": "firmware/ESP32-SEC_Chibi_TouchFix_20261125_merged.bin",
           "offset": 0
         }
       ]
