@@ -25,8 +25,14 @@ with `hal_touch_init(..., xpt_shared_spi = true)`, which reuses `tft`'s SPI
 instance and its transaction lock.
 
 **Rotation:** the UI runs at rotation 1 (320x240 landscape). The ST7789
-inversion command is off (`bruceConfig.colorInverted = 0`, no
-`TFT_INVERSION_ON` flag).
+inversion command is off — set at compile time with
+`-DDEFAULT_COLOR_INVERTED=0` (Bruce loads stored settings *after* the board's
+GPIO hook, so a runtime assignment alone would be overwritten by NVS).
+
+`TFT_eSPI` adds a CGRAM offset only for 240x240, 135x240, 172x320, 170x320
+and 240x300 panels; a 240x320 panel needs none, so no `CGRAM_OFFSET` flag is
+set. If red and blue look swapped, change `TFT_RGB_ORDER` to `TFT_BGR`. If the
+display glitches at 40 MHz, lower `SPI_FREQUENCY` to 20000000.
 
 ## GPIOs reserved by the module — do not use
 

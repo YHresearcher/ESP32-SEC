@@ -20,8 +20,9 @@ its complete offensive feature set, re-based onto this board:
 - Full Bruce module set: Wi-Fi, BLE, sub-GHz RF (CC1101), NRF24, RFID/NFC
   (PN532 / ST25R3916 / RC522), IR, FM radio, BadUSB, GPS, scripts,
   web interface and the JS interpreter — no `LITE_VERSION` trimming.
-- New board env `esp32-sec-chibi` with the Chibi GPIO profile, 16 MB flash
-  and 8 MB octal PSRAM.
+- One board port only: `esp32-sec-chibi`, with the Chibi GPIO profile,
+  16 MB flash and 8 MB octal PSRAM. The 53 unused upstream board ports were
+  removed from the tree.
 - AGPL-3.0, matching upstream. The previous defensive sources and docs were
   removed from the tree; the old `web/` flashing site remains but is not yet
   updated for these builds.
