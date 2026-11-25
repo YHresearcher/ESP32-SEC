@@ -1,35 +1,28 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b1220">
-  <title>ESP32-SEC — Flash Firmware</title>
-  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+  <meta name="description" content="ESP32-SEC — Bruce-based offensive firmware for the ESP32-S3 Chibi handheld.">
+  <title>ESP32-SEC — Bruce firmware for the Chibi ESP32-S3</title>
   <style>
     :root{font:16px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#eef5fc;background:#0b1220;color-scheme:dark}
     *{box-sizing:border-box}
     body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:20px}
-    main{width:100%;max-width:410px;min-width:0}
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+    main{width:100%;max-width:560px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
     .brand{font-weight:750;letter-spacing:.04em}
     button{font:inherit;cursor:pointer}
     .lang{background:transparent;border:1px solid #39506a;border-radius:9px;color:#dbe8f5;padding:7px 12px;font-size:13px}
-    .panel{background:#152136;border:1px solid #31435d;border-radius:20px;padding:clamp(14px,5vw,26px);text-align:center;min-width:0}
-    .symbol{display:grid;place-items:center;width:56px;height:56px;margin:0 auto 14px;border-radius:16px;background:#183c45;color:#66ead0;font-size:28px}
-    h1{font-size:25px;line-height:1.25;margin:0 0 8px}
-    .subtitle{color:#a5b8cd;font-size:14px;margin:0 0 20px}
-    .selected-label{margin:0 0 8px;text-align:left;font-size:12px;font-weight:650;letter-spacing:.02em;color:#8fe3d1}
-    .firmware-file{display:block;width:100%;font:500 13px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:normal;overflow-wrap:anywhere;word-break:break-all;user-select:text;margin:10px 0 0;padding:10px;border:1px solid #39506a;border-radius:8px;background:#081525;color:#f1f6fc;text-align:left;min-width:0;max-width:100%;height:auto;max-height:none;text-overflow:clip;overflow:visible}
-    .firmware-download{display:block;text-align:left;margin-top:10px;font-size:12px;color:#8fe3d1}
-    .version{background:#0e1a2d;border:1px solid #283f57;border-radius:10px;padding:12px;font-size:12px;min-width:0;max-width:100%;overflow-wrap:anywhere;color:#bad0e1;margin-bottom:20px}
-    #installer{margin:0 auto}
-    esp-web-install-button{display:block}
-    esp-web-install-button::part(button){width:100%;border:none;border-radius:11px;padding:13px 20px;background:#3ed6b7;color:#08201b;font:700 16px system-ui;cursor:pointer}
-    #status{font-size:13px;line-height:1.5;color:#aabed2;margin:16px 0 0}
+    .panel{background:#152136;border:1px solid #31435d;border-radius:20px;padding:clamp(16px,5vw,28px)}
+    h1{font-size:24px;line-height:1.25;margin:0 0 10px}
+    p{color:#a5b8cd;line-height:1.6}
+    code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#0e1a2d;border:1px solid #283f57;border-radius:6px;padding:2px 6px;color:#8fe3d1}
+    pre{background:#0e1a2d;border:1px solid #283f57;border-radius:10px;padding:12px;overflow-x:auto;color:#dbe8f5}
+    .warn{border-left:3px solid #e8b84b;padding-left:12px;color:#e7d3a6}
+    a{color:#8fe3d1}
     footer{display:flex;justify-content:center;gap:14px;margin-top:18px;font-size:12px;color:#8aa2b8}
-    a{color:#9bb6cd;text-decoration:none}
-    a:hover{text-decoration:underline}
     [hidden]{display:none!important}
   </style>
 </head>
@@ -40,24 +33,32 @@
     <button id="locale" class="lang" type="button" aria-label="Switch language">EN</button>
   </header>
   <section class="panel">
-    <div class="symbol" aria-hidden="true">⬇</div>
-    <h1 data-vi="Nạp firmware" data-en="Flash firmware">Nạp firmware</h1>
-    <p class="subtitle">ESP32-S3 N16R8 · 2.8″ Touch</p>
-    <div class="version" aria-live="polite">
-      <div class="selected-label" data-vi="FIRMWARE ĐANG CHỌN" data-en="SELECTED FIRMWARE">FIRMWARE ĐANG CHỌN</div>
-      <div id="version">ESP32-SEC · Alpha</div>
-      <div id="build-time" style="margin-top:6px;text-align:left;font-size:12px;color:#a7c3d5"></div>
-      <div id="firmware-file" class="firmware-file" title="" aria-label="Full firmware filename"></div>
-      <a id="firmware-download" class="firmware-download" hidden download data-vi="Tải file firmware" data-en="Download firmware">Tải file firmware</a>
-    </div>
-    <div id="installer" hidden></div>
-    <p id="status" aria-live="polite"></p>
+    <h1 data-en="Bruce firmware for the Chibi ESP32-S3" data-vi="Firmware Bruce cho ESP32-S3 Chibi">Bruce firmware for the Chibi ESP32-S3</h1>
+    <p data-en="A full-featured offensive-security firmware fork, built for ESP32-S3-WROOM-1-N16R8 with an ST7789V 240x320 screen and XPT2046 touch." data-vi="Fork firmware bảo mật tấn công đầy đủ tính năng, dành cho ESP32-S3-WROOM-1-N16R8 với màn hình ST7789V 240x320 và cảm ứng XPT2046.">A full-featured offensive-security firmware fork, built for ESP32-S3-WROOM-1-N16R8 with an ST7789V 240x320 screen and XPT2046 touch.</p>
+    <p class="warn" data-en="Authorized testing only. Use this firmware only on systems you own or are explicitly permitted to test." data-vi="Chỉ sử dụng trong phạm vi được phép. Chỉ dùng firmware này trên hệ thống bạn sở hữu hoặc được phép kiểm tra.">Authorized testing only. Use this firmware only on systems you own or are explicitly permitted to test.</p>
+    <p data-en="No web installer is published yet. Build and flash locally:" data-vi="Chưa có trình nạp qua web. Hãy biên dịch và nạp tại máy:">No web installer is published yet. Build and flash locally:</p>
+    <pre>git clone --recurse-submodules &lt;repo-url&gt;
+pio run -e esp32-sec-chibi
+pio run -e esp32-sec-chibi -t upload</pre>
+    <p data-en="Before flashing, back up existing firmware/NVS and confirm ROM bootloader recovery. On first boot, run Config > Calibrate Touch." data-vi="Trước khi nạp, hãy sao lưu firmware/NVS hiện có và xác nhận khôi phục bootloader. Lần đầu khởi động, chọn Config > Calibrate Touch.">Before flashing, back up existing firmware/NVS and confirm ROM bootloader recovery. On first boot, run Config > Calibrate Touch.</p>
+    <p><a href="https://github.com/YHresearcher/ESP32-SEC" target="_blank" rel="noopener">GitHub repository</a></p>
   </section>
   <footer>
-    <span>Alpha · ESP32-S3</span>
-    <a href="https://github.com/YHresearcher/ESP32-SEC" target="_blank" rel="noopener">GitHub</a>
+    <span>AGPL-3.0 · based on BruceDevices/firmware</span>
   </footer>
 </main>
-<script src="./app.js?v=manifest-sync-2"></script>
+<script>
+  const btn = document.getElementById('locale');
+  let lang = 'en';
+  function apply() {
+    document.documentElement.lang = lang;
+    btn.textContent = lang === 'en' ? 'VI' : 'EN';
+    document.querySelectorAll('[data-en][data-vi]').forEach(el => {
+      el.textContent = el.getAttribute(lang === 'en' ? 'data-en' : 'data-vi');
+    });
+  }
+  btn.addEventListener('click', () => { lang = lang === 'en' ? 'vi' : 'en'; apply(); });
+  apply();
+</script>
 </body>
 </html>

@@ -1,64 +1,92 @@
-# ESP32-SEC
+# ESP32-SEC — Bruce-based offensive firmware for the Chibi ESP32-S3
 
-Custom wireless security diagnostics firmware for **ESP32-S3 WROOM N16R8 (16 MB flash, 8 MB PSRAM)** with the owner's existing **ST7789V 240×320 + XPT2046** touchscreen. The display/touch pin profile follows a working [Chibi / ModESP32](https://github.com/YHresearcher/ModESP32) hardware build.
+This repository is now a **fork of [BruceDevices/firmware](https://github.com/BruceDevices/firmware)**,
+retargeted to the owner's ESP32-S3-WROOM-1-N16R8 handheld with an ST7789V
+240x320 touchscreen and XPT2046 controller.
 
-**Status: DEVELOPMENT / NO HARDWARE VERIFIED ESP32-SEC RELEASE.** This repository contains code, not a tested firmware image. Hardware validation of the original Chibi display does **not** validate this firmware.
+> **Legal / authorized use only.** Bruce is a red-team tool. Use this firmware
+> only on networks, devices and systems you own or are explicitly authorized
+> to test. Do not use it for unauthorized access, disruption or credential
+> theft. See the upstream [disclaimer](https://github.com/BruceDevices/firmware#-disclaimer).
 
-## What is currently in the repository
+## What changed from the previous ESP32-SEC
 
-| Feature | Implementation | Test |
-|---|---|---|
-| ESP-IDF firmware, N16R8 settings | Source committed | CI pending |
-| LCD / touch, using Chibi GPIO | Source committed | Security Lab hardware test pending |
-| Six-button LVGL UI | Source committed | Hardware pending |
-| EN/VI settings stored in NVS | Source committed; Vietnamese ASCII fallback | Full diacritic font pending |
-| Wi-Fi survey (APs, RSSI, channel, auth) | Source committed | CI + hardware pending |
-| BLE passive advertisement observer | Source committed | CI + hardware pending |
-| 2.4GHz channel counts and duplicate-SSID/open AP observations | Source committed | Hardware pending |
-| Website EN/VI + Web Serial | Source committed | Deploy pending |
-| Web installer | Installer shell, **disabled** absent verified manifest | No stable binary |
-| Export, microSD, NRF24, CC1101, GPS | Not implemented | Future scope |
+The earlier repository was a passive Wi-Fi/BLE diagnostics prototype built
+with ESP-IDF + LVGL, and its PRD explicitly excluded deauth, rogue APs,
+jamming, credential capture and HID injection. That direction has been
+**replaced**. This tree is the full Bruce codebase (PlatformIO/Arduino),
+its complete offensive feature set, re-based onto this board:
+
+- Full Bruce module set: Wi-Fi, BLE, sub-GHz RF (CC1101), NRF24, RFID/NFC
+  (PN532 / ST25R3916 / RC522), IR, FM radio, BadUSB, GPS, scripts,
+  web interface and the JS interpreter — no `LITE_VERSION` trimming.
+- New board env `esp32-sec-chibi` with the Chibi GPIO profile, 16 MB flash
+  and 8 MB octal PSRAM.
+- AGPL-3.0, matching upstream. The previous defensive sources and docs were
+  removed from the tree; the old `web/` flashing site remains but is not yet
+  updated for these builds.
+
+## Hardware target
+
+| Part | Detail |
+|---|---|
+| MCU | ESP32-S3-WROOM-1-N16R8 — 16 MB flash, 8 MB octal PSRAM |
+| Display | ST7789V, 240x320, SPI: SCLK 12 / MOSI 11 / MISO 8 / CS 10 / DC 13 / RST 14 |
+| Touch | XPT2046, shared SPI, CS 9, IRQ 7 |
+| Backlight | not driven (GPIO unverified on the Chibi build) |
+| Rotation | 1 — Bruce UI runs landscape (320x240); panel inversion off |
+
+GPIO33–37 are reserved by octal PSRAM and are never assigned. The display and
+touch pins above come from the owner's working Chibi build; every other pin
+(defaults for CC1101, NRF24, PN532, SD, GPS, IR, RF, etc.) is an assumption
+that can be remapped from **Config > Set Device pins**. See
+[boards/esp32-sec-chibi/connections.md](boards/esp32-sec-chibi/connections.md)
+for the full table and touch-calibration notes.
 
 ## Build
 
-Use **ESP-IDF v6.0.1+**, Python dependencies and IDF Component Manager.
+Install [PlatformIO Core](https://docs.platformio.org/en/latest/core/installation/index.html)
+with **Python 3.10–3.14** (the pioarduino platform refuses Python 3.9), and
+the Git submodules (all seven vendored libraries are tracked as gitlinks):
 
 ```sh
-cd firmware
-idf.py set-target esp32s3
-idf.py build
+git clone --recurse-submodules <this-repo>
+cd ESP32-SEC
+git submodule update --init --recursive
+pio run -e esp32-sec-chibi
 ```
 
-To test on the real board, first back up the working Chibi firmware/NVS, verify USB ROM bootloader recovery and wiring, then use `idf.py -p <serial-port> flash monitor`. Use the 16 MB N16R8 partition profile. **Do not flash binary files from the original ESP32-DIV board.**
+`default_envs` in `platformio.ini` is already set to `esp32-sec-chibi`, so a
+plain `pio run` builds the same target. Flash over the native USB port:
 
-## Website
+```sh
+pio run -e esp32-sec-chibi -t upload
+pio device monitor
+```
 
-`web/` is an HTML/CSS/JS static site that supports EN/VI and Web Serial. GitHub Pages workflow is present; enabling GitHub Pages with *Source: GitHub Actions* may be necessary in repository Settings. Intended URL after deployment: https://yhresearcher.github.io/ESP32-SEC/ (not guaranteed live until deployment confirmed).
+First-boot checklist:
 
-`web/manifest.json` intentionally does not exist. It is published only after a real board passes acceptance tests, verifying bootloader/partition/app offsets and a recovery procedure. Therefore the web installer does **not** offer a dangerous untested flash.
+1. Back up the existing Chibi firmware and NVS, and verify ROM bootloader
+   recovery before flashing.
+2. Confirm the screen initialises in landscape and colours are correct.
+3. Run **Config > Calibrate Touch** and save the result. If touches are
+   mirrored/rotated, fix `touchCfg()` in
+   [interface.cpp](boards/esp32-sec-chibi/interface.cpp) and rebuild.
+4. Only then attach external RF/NFC/IR hardware, one module at a time.
 
-## Hardware pins (Chibi reference)
+A successful compile produces `Bruce-esp32-sec-chibi.bin` at the repository
+root (a merged image ready for offset 0x0) in addition to the normal
+`.pio/build/esp32-sec-chibi/` artifacts. A successful compile does **not**
+mean on-device verification. Radio behaviour, touch calibration and
+peripheral wiring still require hardware testing.
 
-SCK 12; MOSI 11; MISO 8; LCD CS 10, DC 13, RST 14; XPT2046 CS 9, IRQ 7. LCD inversion false; touch X mirroring true. No backlight GPIO is driven because it has not been confirmed.
+## Attribution and licence
 
-## Development policy
+This fork is derived from Bruce by the BruceDevices contributors and is
+licensed under the **GNU Affero General Public License v3.0** — see
+[LICENSE](LICENSE) and [THIRD_PARTY.md](THIRD_PARTY.md). Upstream board-porting
+documentation lives in [boards/README.md](boards/README.md); the custom board
+follows that template.
 
-Read [Architecture](docs/ARCHITECTURE.md) and [Acceptance criteria](docs/ACCEPTANCE.md). Build success is not hardware verification. Explicitly exclude packet flooding, unauthorized disconnection, jamming, deceptive credential capture and hostile HID injection.
-
-## Attribution
-
-- [ESP32-DIV](https://github.com/cifertech/ESP32-DIV) — MIT licensed architecture reference (not directly vendored).
-- [ESP32 Marauder](https://github.com/justcallmekoko/ESP32Marauder) — reference only.
-- [ModESP32](https://github.com/YHresearcher/ModESP32) — working Chibi LCD/touch pin profile.
-
-
-## ESP32-DIV integration (work in progress)
-
-The [upstream ESP32-DIV](https://github.com/cifertech/ESP32-DIV) feature inventory and a hardware compatibility matrix are tracked in [docs/ESP32-DIV-INTEGRATION.md](docs/ESP32-DIV-INTEGRATION.md).
-
-- The existing ESP32-S3 Wi-Fi and NimBLE passive scan integrations are retained. BLE scan results are now connected to the screen, and host synchronization is awaited before scanning. **Physical-device verification remains necessary.**
-- A compiled feature registry records currently integrated firmware modules versus future NRF24, CC1101, IR, NFC/RFID, GNSS and microSD modules. Registry entries never imply that a missing peripheral is installed.
-- A build-time Vietnamese LVGL 9 font generator rasterizes Unicode glyphs; it requires Pillow and DejaVu Sans on the CI runner. Source TTF files are **not** committed to the firmware image.
-- Dangerous disruptive and impersonation modules are explicitly excluded. This is not a wholesale copy of ESP32-DIV Arduino code: the board uses ESP-IDF, LVGL 9, and an ST7789V screen, not upstream ILI9341 wiring.
-
-**Release status:** experimental. CI compilation verifies builds, not on-device compatibility, radio performance, or touchscreen calibration.
+The original passive `ESP32-SEC` prototype exists in this repository's git
+history for reference only and is not part of the current build.
