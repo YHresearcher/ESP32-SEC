@@ -1,0 +1,67 @@
+name: Publish ESP32-SEC Chibi web flasher
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/deploy-chibi-web.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: esp32-sec-chibi-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the exact 2026-11-25 ESP32-S3 Chibi artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Bruce-esp32-sec-chibi
+          run-id: 45625799431
+          github-token: ${{ github.token }}
+          path: dist/firmware
+      - name: Validate merged binary and bundle website
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/firmware/Bruce-esp32-sec-chibi.bin
+          echo "9b1c491cd65ca798499fe8a36f9b6dc054d28ade41e7d4061073d9405db16a7a  dist/firmware/Bruce-esp32-sec-chibi.bin" | sha256sum -c -
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          manifest=json.loads(Path("web/manifest.json").read_text())
+          assert len(manifest["builds"]) == 1
+          build=manifest["builds"][0]
+          assert build["chipFamily"] == "ESP32-S3"
+          assert len(build["parts"]) == 1
+          assert build["parts"][0]["offset"] == 0
+          assert build["parts"][0]["path"] == "firmware/ESP32-SEC_Chibi_20261125_merged.bin"
+          data=Path("dist/firmware/Bruce-esp32-sec-chibi.bin").read_bytes()
+          assert len(data)==4212960
+          assert data[0]==0xE9, "Not an ESP32 image at offset 0"
+          assert data[0x8000:0x8002]==bytes([0xAA,0x50]), "Missing ESP partition table at 0x8000"
+          assert data[0x10000]==0xE9, "Missing application image at 0x10000"
+          PY
+          mkdir -p dist/firmware
+          mv dist/firmware/Bruce-esp32-sec-chibi.bin dist/firmware/ESP32-SEC_Chibi_20261125_merged.bin
+          cp web/index.html web/manifest.json dist/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - name: Deploy ESP32-SEC web flasher
+        id: deployment
+        uses: actions/deploy-pages@v4
