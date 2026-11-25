@@ -272,23 +272,26 @@ void CYD28_TouchR::update() {
 }
 // ------------------------------------------------------------
 void CYD28_TouchR::convertRawXY(uint16_t *x, uint16_t *y) {
-    uint16_t x_tmp = *x, y_tmp = *y, xx, yy;
-
-    if (!touchCalibration_rotate) {
-        xx = (x_tmp - touchCalibration_x0) * sizeX_px / (touchCalibration_x1 - touchCalibration_x0);
-        yy = (y_tmp - touchCalibration_y0) * sizeY_px / (touchCalibration_y1 - touchCalibration_y0);
-        if (touchCalibration_invert_x) xx = sizeX_px - xx;
-        if (touchCalibration_invert_y) yy = sizeY_px - yy;
-    } else {
-        xx = (y_tmp - touchCalibration_x0) * sizeX_px / (touchCalibration_x1 - touchCalibration_x0);
-        yy = (x_tmp - touchCalibration_y0) * sizeY_px / (touchCalibration_y1 - touchCalibration_y0);
-        if (touchCalibration_invert_x) xx = sizeX_px - xx;
-        if (touchCalibration_invert_y) yy = sizeY_px - yy;
+    // Signed arithmetic prevents unsigned wraparound when an ADC sample
+    // falls slightly outside calibrated endpoints. Wrapping previously
+    // turned such samples into a tap at a screen edge.
+    if (!x || !y) return;
+    const int32_t inputX = touchCalibration_rotate ? *y : *x;
+    const int32_t inputY = touchCalibration_rotate ? *x : *y;
+    const int32_t spanX = int32_t(touchCalibration_x1) - int32_t(touchCalibration_x0);
+    const int32_t spanY = int32_t(touchCalibration_y1) - int32_t(touchCalibration_y0);
+    if (!spanX || !spanY || sizeX_px <= 0 || sizeY_px <= 0) {
+        *x = 0; *y = 0;
+        return;
     }
-    if (xx > sizeX_px) xx = sizeX_px - 1;
-    if (yy > sizeY_px) yy = sizeY_px - 1;
-    *x = xx;
-    *y = yy;
+    int32_t xx = (inputX - int32_t(touchCalibration_x0)) * (sizeX_px - 1) / spanX;
+    int32_t yy = (inputY - int32_t(touchCalibration_y0)) * (sizeY_px - 1) / spanY;
+    if (touchCalibration_invert_x) xx = (sizeX_px - 1) - xx;
+    if (touchCalibration_invert_y) yy = (sizeY_px - 1) - yy;
+    xx = xx < 0 ? 0 : (xx >= sizeX_px ? sizeX_px - 1 : xx);
+    yy = yy < 0 ? 0 : (yy >= sizeY_px ? sizeY_px - 1 : yy);
+    *x = static_cast<uint16_t>(xx);
+    *y = static_cast<uint16_t>(yy);
 }
 
 /***************************************************************************************
