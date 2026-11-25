@@ -9,6 +9,8 @@
 
 extern CYD28_TouchR touch; // defined by hal/inputs/touch.cpp
 
+static bool chibiTouchReady = false;
+
 // The XPT2046 is mounted on the Chibi panel in portrait; Bruce renders its UI
 // in landscape (rotation 1). These transforms are the starting point — run
 // Config > Calibrate Touch on the device and save the result to NVS if the
@@ -99,10 +101,13 @@ void _setup_gpio() {
 ***************************************************************************************/
 void _post_setup_gpio() {
     // Reuse the display's SPI instance: both sides take the SPI transaction lock.
-    if (!hal_touch_init(touchCfg(), 0, TFT_MOSI == CYD28_TouchR_MOSI)) {
+    chibiTouchReady = hal_touch_init(touchCfg(), 0, TFT_MOSI == CYD28_TouchR_MOSI);
+    if (!chibiTouchReady) {
         Serial.println("[TOUCH] XPT2046 not started");
     } else {
-        Serial.println("[TOUCH] XPT2046 started OK");
+        // Require a stronger measured pressure to reject spurious ADC pulses.
+        touch.setThreshold(600);
+        Serial.println("[TOUCH] XPT2046 started; IRQ-gated and debounced");
     }
     // No backlight GPIO is driven: the Chibi backlight is hardware-controlled.
 }
@@ -116,14 +121,44 @@ void _setBrightness(uint8_t brightval) { (void)brightval; }
 ** Function: InputHandler — touch only. The input task handles power-save timing.
 ***************************************************************************************/
 void InputHandler(void) {
-    static unsigned long lastTouch = 0;
-    if (millis() - lastTouch > 200 || LongPress) {
-        BruceTouchPoint t;
-        if (hal_touch_read(touchCfg(), t)) {
-            lastTouch = millis();
-            hal_touch_apply(t);
+    // XPT2046 PENIRQ is active LOW. A single physical press may last
+    // hundreds of milliseconds: never translate it to repeated menu clicks.
+    // Also ignore floating/invalid samples when the input is not asserted.
+    static bool pressConsumed = false;
+    static uint32_t pressStarted = 0;
+    static uint32_t releasedAt = 0;
+    static uint8_t stableReleases = 0;
+    if (!chibiTouchReady) return;
+    const uint32_t now = millis();
+    if (digitalRead(XPT2046_TOUCH_CONFIG_INT_GPIO_NUM) != LOW) {
+        if (++stableReleases >= 2) {
+            if (pressConsumed) releasedAt = now;
+            pressConsumed = false;
+            pressStarted = 0;
         }
+        return;
     }
+    stableReleases = 0;
+    if (pressConsumed || now - releasedAt < 120) return;
+    if (!pressStarted) {
+        pressStarted = now;
+        return;
+    }
+    if (now - pressStarted < 35) return;
+    BruceTouchPoint first;
+    if (!hal_touch_read(touchCfg(), first)) return;
+    // A second independent read rejects one-off spikes on shared LCD SPI.
+    delay(12);
+    if (digitalRead(XPT2046_TOUCH_CONFIG_INT_GPIO_NUM) != LOW) return;
+    BruceTouchPoint second;
+    if (!hal_touch_read(touchCfg(), second)) return;
+    const int dx = abs(int(first.x) - int(second.x));
+    const int dy = abs(int(first.y) - int(second.y));
+    if (dx > 18 || dy > 18) return;
+    if (second.x < 0 || second.y < 0 ||
+        second.x >= tft.width() || second.y >= tft.height()) return;
+    pressConsumed = true;
+    hal_touch_apply(second);
 }
 
 void powerOff() { esp_deep_sleep_start(); }
