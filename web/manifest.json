@@ -1,0 +1,16 @@
+{
+  "name": "ESP32-SEC Chibi — Bruce 2026-11-25 (CI firmware)",
+  "version": "a207993125fd / 2026-11-25",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-S3",
+      "parts": [
+        {
+          "path": "firmware/ESP32-SEC_Chibi_20261125_merged.bin",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}
