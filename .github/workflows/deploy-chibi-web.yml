@@ -62,6 +62,9 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+      - name: Wait for GitHub Pages artifact indexing
+        shell: bash
+        run: sleep 12
       - name: Deploy ESP32-SEC web flasher
         id: deployment
         uses: actions/deploy-pages@v4
